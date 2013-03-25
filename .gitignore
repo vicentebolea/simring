@@ -1,5 +1,10 @@
 # Build and Release Folders
-#bin/
+bin/appserver
+bin/node
+bin/scheduler_bdema
+bin/scheduler_hash
+
+# Other files and folders
 data/
 tmp/
 log/
@@ -8,5 +13,4 @@ tags
 docs/html/
 docs/latex/
 
-# Other files and folders
 

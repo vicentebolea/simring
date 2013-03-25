@@ -3,15 +3,15 @@ include Makefile.vars
 .PHONY: lib dist node docs
 
 all: lib node
-	$(CXX) src/scheduler.cpp -o bin/scheduler_bdema $(CXXFLAGS) $(OPTIONS) -DBDEMA
-	$(CXX) src/scheduler.cpp -o bin/scheduler_hash $(CXXFLAGS) $(OPTIONS) -DHASH 
+	$(CXX) src/scheduler.cc -o bin/scheduler_bdema $(CXXFLAGS) $(OPTIONS) -DBDEMA
+	$(CXX) src/scheduler.cc -o bin/scheduler_hash $(CXXFLAGS) $(OPTIONS) -DHASH 
 
 lib:
 	@echo building a static library!!
 	$(MAKE) -C lib/ 
 
 node:
-	-$(CXX) src/appServer.cpp -o bin/appserver -lpthread $(CXXFLAGS) $(OPTIONS)
+	-$(CXX) src/node.cc -o bin/node -lpthread $(CXXFLAGS) $(OPTIONS)
 
 clean:
 	-rm lib/*.o bin/scheduler_{bdema,hash} bin/appserver lib/libuniDQP.a

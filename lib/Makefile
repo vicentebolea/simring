@@ -1,9 +1,9 @@
 CXXFLAGS = -Wall -g -I.
-sources := $(wildcard *.cpp) 
-objects := $(patsubst %.cpp, %.o, $(sources))
-.SUFFIXES: .o .cpp
+sources := $(wildcard *.cc) 
+objects := $(patsubst %.cc, %.o, $(sources))
+.SUFFIXES: .o .cc
 
-.cpp.o:
+.cc.o:
 	$(CXX) $(CXXFLAGS) -c $< -o $@ $(OPTIONS)
 
 all: $(objects) 
