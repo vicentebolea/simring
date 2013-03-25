@@ -14,7 +14,7 @@ node:
 	-$(CXX) src/node.cc -o bin/node -lpthread $(CXXFLAGS) $(OPTIONS)
 
 clean:
-	-rm lib/*.o bin/scheduler_{bdema,hash} bin/appserver lib/libuniDQP.a
+	-rm lib/*.o bin/scheduler_{bdema,hash} bin/node lib/libuniDQP.a
 
 dist: clean
 	tar -cvzf simulator_simple_`date +"%d-%m-%y"`.tar.gz ./*
