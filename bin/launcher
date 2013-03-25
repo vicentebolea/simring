@@ -5,44 +5,48 @@
 # Vicente Adolfo Bolea Sanchez                      #
 #####################################################
 
+#Includes
+. launcher.vars
+
+if [ -z $nodes ] || [ -z $path ]; then 
+ echo "Undefined variable in launcher.vars"
+ exit
+fi
+
 function killapps {
-	echo Killing another instances of this program
-	killall scheduler 
-	
-	for i in {1..39}; do
-		if ((i < 10)); then
-			ssh raven0$i killall appserver
-		else
-			ssh raven$i killall appserver
-		fi
-	done
-	exit
+ echo Killing another instances of this program
+ killall scheduler 
+
+ for i in "${nodes[@]}"; do
+   ssh $i killall appserver
+ done
+ exit
 }
 
 trap killapps SIGINT SIGTERM
 
-path=~vicente/uniBDEMA/
-appserver=$path'bin/appserver'
-data=$path'data/trace4.ready'
-tmp=$path'tmp/'
-log=$path'log/'
-bin=$path'bin/'
-date=`date +"%H/%M/%S-%d/%m/%y"`
 declare -a PIDS
 
 case "$1" in 
-	"BDEMA") 	scheduler=$bin'scheduler_bdema'
-						scheduler_log=$log'bdema.dat'
-						distribution_log=$log'distribution.result' ;;
+"BDEMA") 	
+ scheduler=$bin'scheduler_bdema'
+ scheduler_log=$log'bdema.dat'
+ distribution_log=$log'distribution.result'
+ ;;
 
-	"HASH") 	scheduler=$bin'scheduler_hash'
-						scheduler_log=$log'hash.dat'
-						distribution_log=$log'hashdistribution.result' ;;
+"HASH") 	
+ scheduler=$bin'scheduler_hash'
+ scheduler_log=$log'hash.dat'
+ distribution_log=$log'hashdistribution.result' 
+ ;;
 
-	"KILL") 	killapps ;; 
+"KILL") killapps ;; 
 
-	*)				echo "Introduce 'launcher BDEMA|HASH|KILL' "
-						exit ;;
+*)
+ echo "Introduce 'launcher BDEMA|HASH|KILL' "
+ exit 
+ ;;
+
 esac
 
 #Clean log files
@@ -50,8 +54,10 @@ esac
 > $distribution_log
 
 printf "\n#%s\n" $date >> $scheduler_log
-echo '#[#queries] [#DiskPages] [hits] [Miss] [Exec Time] [Max Exec Time] [Avg Exec Time] [Wait Time] [Max Wait Time] [Avg Wait Time] [Total Time] [hitRatio]' \
-	 >> $scheduler_log
+echo '#[#queries] [#DiskPages] [hits] [Miss] '        \
+     '[Exec Time] [Max Exec Time] [Avg Exec Time] '   \
+     '[Wait Time] [Max Wait Time] [Avg Wait Time] '   \
+     '[Total Time] [hitRatio]' >> $scheduler_log
 
 ii=$2
 # launch programs
@@ -59,40 +65,36 @@ $scheduler -q $ii < $data > $tmp'uniDQPscheduler.log'&
 pidS=$!
 
 idx=0
-for i in {1..39}; do	
- if ((i < 10)); then
-	 ssh raven0$i $appserver > tmp/uniDQP.$i.log 2>> $log'errors.log'&
- else
-	 ssh raven$i $appserver > tmp/uniDQP.$i.log 2>> $log'errors.log'&
- fi
-
+for i in "${nodes[@]}"; do
+do	
+ ssh $i $appserver > tmp/uniDQP.$i.log 2>> $log'errors.log'&
  PIDS[$idx]=$!
  let idx++
 done
 
 #Wait for all the process
 for i in ${PIDS[@]}; do
-	 wait $i
+ wait $i
 done
 wait $pidS
 
 #store the output
 cat tmp/uniDQP.*.log | awk \
- ' $1 == "Processed:" { printf "%s\t",$2 }
-	END{ print "" } ' >> $distribution_log
+     ' $1 == "Processed:" { printf "%s\t",$2 }
+     END{ print "" } ' >> $distribution_log
 
 cat $tmp'uniDQPscheduler.log' | awk \
- ' $1 == "#querys:"				{ printf "%s\t",$2 }
- 	 $1 == "#DiskPages:"		{ printf "%s\t",$2 }
-	 $1 == "TotalHit:"			{ printf "%s\t",$2 }
-	 $1 == "TotalMiss:"			{ printf "%s\t",$2 }
-	 $1 == "TotalExecTime:"	{ printf "%s\t",$2 }
-	 $1 == "MaxExecTime:"		{ printf "%s\t",$2 }
-	 $1 == "AveExecTime:"		{ printf "%s\t",$2 }
-	 $1 == "TotalWaitTime:"	{ printf "%s\t",$2 }
-	 $1 == "MaxWaitTime:"		{ printf "%s\t",$2 }
-	 $1 == "AveWaitTime:"		{ printf "%s\t",$2 }
-	 $1 == "TotalTime:"			{ printf "%s\t",$2 }
-	 $1 == "Hitratio:"			{ printf "%s\n",$2 }' >> $scheduler_log
+   ' $1 == "#querys:"       { printf "%s\t",$2 }
+     $1 == "#DiskPages:"    { printf "%s\t",$2 }
+     $1 == "TotalHit:"      { printf "%s\t",$2 }
+     $1 == "TotalMiss:"     { printf "%s\t",$2 }
+     $1 == "TotalExecTime:" { printf "%s\t",$2 }
+     $1 == "MaxExecTime:"   { printf "%s\t",$2 }
+     $1 == "AveExecTime:"   { printf "%s\t",$2 }
+     $1 == "TotalWaitTime:" { printf "%s\t",$2 }
+     $1 == "MaxWaitTime:"   { printf "%s\t",$2 }
+     $1 == "AveWaitTime:"   { printf "%s\t",$2 }
+     $1 == "TotalTime:"     { printf "%s\t",$2 }
+     $1 == "Hitratio:"      { printf "%s\n",$2 } ' >> $scheduler_log
 
 echo Done with $ii IO operations 
