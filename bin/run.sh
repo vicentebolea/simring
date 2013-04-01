@@ -1,17 +1,25 @@
-path=~vicente/uniDQP/
-appserver=$path'bin/appserver'
-scheduler=$path'bin/scheduler'
+#!/bin/bash
+SERVERS=(cherry birch dove elm gingko hawthorn fever)
+
+trap killapps SIGINT SIGTERM
+function killapps {
+ echo Killing another instances of this program
+ killall scheduler 
+
+ for i in ${SERVERS[@]}; do	
+   ssh $i killall node
+ done
+ exit
+}
+path=~vicente/simulator_simple/
+appserver=$path'bin/node'
 declare -a PIDS
 
 idx=0
-for i in {1..39}; do	
- if ((i < 10)); then
-	ssh raven0$i $appserver&
-	pids[idx]=$!
- else
-	ssh raven$i $appserver&
-	pids[idx]=$!
- fi
+for i in ${SERVERS[@]}; do	
+  ssh $i $appserver&
+  pids[idx]=$!
+done
 
 echo finish
 for i in ${PIDS[@]}; do
@@ -19,3 +27,5 @@ for i in ${PIDS[@]}; do
 done
 
 
+
+#

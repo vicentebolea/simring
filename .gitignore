@@ -13,4 +13,6 @@ tags
 docs/html/
 docs/latex/
 
-
+# Swap vim files
+*.swp
+*.swo

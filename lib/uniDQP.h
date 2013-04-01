@@ -145,6 +145,7 @@ class server {
 		double ema, alpha;
 
 	public:
+  server () : ema(.0), alpha(.0) {}
 		server(packet&, double);
 		double getDistance(packet&);
 		void updateEMA(packet&);
@@ -202,9 +203,13 @@ class SETcache {
 
 		std::set<diskPage, comparator> cache;
 		long max;
+  char path [256];
 
 	public:
-		SETcache(int _max_ = 100): max(_max_) {}
+		SETcache (int _max_ = 100): max(_max_) {}
+  void setDataFile (char* p) { 
+   strncpy (this->path, p, 256);
+  }
 		void match(packet*, uint64_t**);
 };
 

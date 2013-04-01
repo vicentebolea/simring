@@ -1,12 +1,23 @@
 #!/bin/bash
 
 #####################################################
-# Script to run BDEMA experiments in RAVEN cluster  #
+# Script to run                                     #
 # Vicente Adolfo Bolea Sanchez                      #
 #####################################################
 
 #Includes
-. launcher.vars
+. bin/launcher.vars
+
+#Dont needed to change
+path_file=`readlink -f $0`
+path=$(dirname $path_file)
+
+node=$path'/../bin/node'
+#node_args="-h "$host_addr" -p "$port" -d "$datafile
+data=$path'/../data/trace4.ready'
+#log=$path'../log/'
+bin=$path'/../bin/'
+date=`date +"%H/%M/%S-%d/%m/%y"`
 
 if [ -z $nodes ] || [ -z $path ]; then 
  echo "Undefined variable in launcher.vars"
@@ -15,10 +26,10 @@ fi
 
 function killapps {
  echo Killing another instances of this program
- killall scheduler 
+ killall scheduler_bdema scheduler_hash
 
  for i in "${nodes[@]}"; do
-   ssh $i killall appserver
+   ssh $i killall node
  done
  exit
 }
@@ -26,18 +37,17 @@ function killapps {
 trap killapps SIGINT SIGTERM
 
 declare -a PIDS
+declare -a TEMP_FILE
 
 case "$1" in 
 "BDEMA") 	
  scheduler=$bin'scheduler_bdema'
- scheduler_log=$log'bdema.dat'
- distribution_log=$log'distribution.result'
+# distribution_log=$log'distribution.result'
  ;;
 
 "HASH") 	
  scheduler=$bin'scheduler_hash'
- scheduler_log=$log'hash.dat'
- distribution_log=$log'hashdistribution.result' 
+# distribution_log=$log'hashdistribution.result' 
  ;;
 
 "KILL") killapps ;; 
@@ -49,25 +59,21 @@ case "$1" in
 
 esac
 
-#Clean log files
-> $log'errors.log'
-> $distribution_log
+#Create output tmp files for each node
+for i in "${nodes[@]}"; do
+ TMP_FILE[$i]=`mktemp "/tmp/simulator_"$i"_XXX"`
+done
 
-printf "\n#%s\n" $date >> $scheduler_log
-echo '#[#queries] [#DiskPages] [hits] [Miss] '        \
-     '[Exec Time] [Max Exec Time] [Avg Exec Time] '   \
-     '[Wait Time] [Max Wait Time] [Avg Wait Time] '   \
-     '[Total Time] [hitRatio]' >> $scheduler_log
+TMP_FILE["error"]="/tmp/simulator_error"
 
-ii=$2
 # launch programs
-$scheduler -q $ii < $data > $tmp'uniDQPscheduler.log'&
+ii=$2
+$scheduler -q $ii -p 19999 -n 7 < $data 2>> ${TMP_FILE["error"]}&
 pidS=$!
 
 idx=0
 for i in "${nodes[@]}"; do
-do	
- ssh $i $appserver > tmp/uniDQP.$i.log 2>> $log'errors.log'&
+ ssh $i "$node -h $host_addr -p $port -d $datafile" > ${TMP_FILE[$i]} 2>> ${TMP_FILE["error"]}&
  PIDS[$idx]=$!
  let idx++
 done
@@ -79,22 +85,12 @@ done
 wait $pidS
 
 #store the output
-cat tmp/uniDQP.*.log | awk \
-     ' $1 == "Processed:" { printf "%s\t",$2 }
-     END{ print "" } ' >> $distribution_log
-
-cat $tmp'uniDQPscheduler.log' | awk \
-   ' $1 == "#querys:"       { printf "%s\t",$2 }
-     $1 == "#DiskPages:"    { printf "%s\t",$2 }
-     $1 == "TotalHit:"      { printf "%s\t",$2 }
-     $1 == "TotalMiss:"     { printf "%s\t",$2 }
-     $1 == "TotalExecTime:" { printf "%s\t",$2 }
-     $1 == "MaxExecTime:"   { printf "%s\t",$2 }
-     $1 == "AveExecTime:"   { printf "%s\t",$2 }
-     $1 == "TotalWaitTime:" { printf "%s\t",$2 }
-     $1 == "MaxWaitTime:"   { printf "%s\t",$2 }
-     $1 == "AveWaitTime:"   { printf "%s\t",$2 }
-     $1 == "TotalTime:"     { printf "%s\t",$2 }
-     $1 == "Hitratio:"      { printf "%s\n",$2 } ' >> $scheduler_log
+#cat tmp/uniDQP.*.log | awk \
+     #' $1 == "Processed:" { printf "%s\t",$2 }
+     #END{ print "" } ' >> $distribution_log
 
 echo Done with $ii IO operations 
+
+for i in "${nodes[@]}"; do
+ rm TMP_FILE[$i]
+done

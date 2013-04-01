@@ -17,7 +17,7 @@ void SETcache::match(packet* e, uint64_t** count)
 
       // read a block from a file
 			long currentChunk = (e->fid%4429) * 12000000;  // Over 12MiB
-			ifstream file ("/scratch/youngmoon01/garbage2.bin", ios::in | ios::binary);
+			ifstream file (path, ios::in | ios::binary);
 
 			if (file.good() == false) {
 				perror("FILE NOT FOUND"); exit(1); }
