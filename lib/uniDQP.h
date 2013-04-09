@@ -67,6 +67,7 @@
 #include <iostream>
 #include <fstream>
 #include <set>
+#include "lru/lru_map.hh"
 
 using namespace std;
 
@@ -173,44 +174,17 @@ class diskPage {
 
 class LRUcache {
 	private:
-		int max;
-		int length;
-		diskPage *oldest, *newest;
+  lru_map<uint64_t, diskpage>& lru;
 
-		void push(diskPage*);
-		void pop();
-		bool isEmpty();
-
-	public:
-		LRUcache(int m = 5): max(m),length(0),oldest(NULL),newest(NULL){}
-		~LRUcache();
-
-		bool get(diskPage*);
-		void match(packet *, uint64_t**);
-};
-
-class SETcache {
-	private: 
-		class comparator{
-			public:
-				bool operator() (const diskPage& a, const diskPage& b) {	
-					if (a.fid == b.fid)
-						return a.offset < b.offset;
-					else
-						return a.fid < b.fid;
-				}
-		};
-
-		std::set<diskPage, comparator> cache;
 		long max;
   char path [256];
-
 	public:
-		SETcache (int _max_ = 100): max(_max_) {}
+		LRUcache(int _size) : lru (_size);
+
   void setDataFile (char* p) { 
    strncpy (this->path, p, 256);
   }
-		void match(packet*, uint64_t**);
+		void match (packet&, uint64_t*, uint64_t*);
 };
 
 #endif
