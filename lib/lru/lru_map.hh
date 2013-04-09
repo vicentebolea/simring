@@ -43,8 +43,8 @@
 #ifndef __LRU_MAP_HH_
 #define __LRU_MAP_HH_
 
-#include <dictionary.hh>
-#include <hashtable.hh>
+#include "dictionary.hh"
+#include "hashtable.hh"
 
 #include <stdexcept>
 #include <algorithm>
@@ -77,7 +77,7 @@ class lru_map: public dictionary<key, value> {
   hashTable<key, typename list<pair<key, value> >::iterator> ht;
 };
 
-#include <lru_map.tcc>
+#include "lru_map.tcc"
 
 
 #endif

@@ -60,7 +60,7 @@
 #define __HASHTABLE_HH_
 
 // Base class
-#include <dictionary.hh>
+#include "dictionary.hh"
 
 // STL libraries
 #include <list>
@@ -111,6 +111,6 @@ class hashTable: public dictionary<key, value> {
   void rehash (void);
 };
 
-#include <hashtable.tcc>
+#include "hashtable.tcc"
 
 #endif

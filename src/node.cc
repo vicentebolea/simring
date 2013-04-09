@@ -6,89 +6,28 @@ using namespace std;
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
-SETcache setCache(CACHESIZE); //since a BST has a O(log(n)) for searching
+LRUcache cache(CACHESIZE); 
 
+int sock, port;  
 bool die_thread = false;
 uint32_t queryRecieves = 0, queryProcessed = 0;
 uint64_t hitCount = 0, missCount = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0;
-pthread_mutex_t empty = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_mutex_t mutex_scheduler = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_neighbor  = PTHREAD_MUTEX_INITIALIZER;
+pthread_t thread_disk;
+pthread_t thread_neighbor;
 
-void* thread_func_worker (void* argv) {
- uint64_t* hitmiss_count[2] = {&hitCount, &missCount};
-
- while (die_thread != true || queue_scheduler.empty() != true) {
-  while (queue_scheduler.empty() && die_thread != true) 
-   pthread_mutex_lock (&empty);
-  if (die_thread == true)
-   continue;
-
-  Query* query = queue_scheduler.front();
-
-  query->setStartDate();
-  setCache.match (static_cast<packet*> (query), hitmiss_count);
-  query->setFinishedDate();
-
-  queryProcessed++;
-  TotalExecTime += query->getExecTime();
-  TotalWaitTime += query->getWaitTime();
-
-  queue_scheduler.pop();
-  delete query;
- }
- pthread_exit(EXIT_SUCCESS);
-}
-
-#ifdef P2P
-void* thread_func_neighbor (void* argv) {
-
- pthread_exit(EXIT_SUCCESS);
-}
-#endif 
-
-int main (int argc, char** argv) {
- int sock, c, port;  
- struct hostent *host;
- struct sockaddr_in server_addr;  
- struct timeval start, end;;
- pthread_t worker;
- char host_str [32], data_file [256];
-
- while ((c = getopt (argc, argv, "h:d:p:")) != -1)
-  switch (c) {
-   case 'h': strncpy (host_str, optarg, 32); break;
-   case 'd': strncpy (data_file, optarg, 256); break;
-   case 'p': port = atoi (optarg);      break;
-  }
-
- setCache.setDataFile (data_file);
- //Start Network setting
- host = gethostbyname (host_str);
- if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == FAIL) {
-  perror ("Socket");
-  exit (EXIT_FAILURE);
- }
-
- server_addr.sin_family = AF_INET;
- server_addr.sin_port = htons(port);
- server_addr.sin_addr = *((struct in_addr *)host->h_addr);
- bzero (&(server_addr.sin_zero),8);
-
- if (connect(sock, (struct sockaddr *)&server_addr,
-    sizeof(struct sockaddr)) == FAIL) {
-  perror ("Connect error"); exit (EXIT_FAILURE); } 	//End Network settings
-
- gettimeofday(&start, NULL);
-
- pthread_mutex_lock (&empty); /* Initialize the lock to 0 */
- pthread_create (&thread_func_worker, NULL, worker_run, NULL);
-//pthread_create (&thread_func_neighbor, NULL, worker_run, NULL);
-
+/*
+ *
+ */
+void thread_func_main (void) {
  while (true) {
   char recv_data[LOT];
   recv_msg (sock, recv_data);
 
+  //When a new query arrive
   if (strcmp(recv_data, "QUERY") == OK) {
    Query* aux = new Query();
    if (sizeof(packet) != recv(sock, static_cast<packet*>(aux), sizeof(packet), MSG_WAITALL))
@@ -98,14 +37,14 @@ int main (int argc, char** argv) {
    queryRecieves++;
    delete aux;
 
-   pthread_mutex_unlock (&empty);
+   pthread_mutex_unlock (&mutex_scheduler);
 
+  //When it ask for information
   } else if (strcmp (recv_data , "INFO") == OK) {
    char send_data[LOT] = "", tmp[256];
    while (queue_scheduler.empty () != true)
     sleep (1);
 
-   //make variables such as hit Count...
    sprintf (tmp, "CacheHit=%"      PRIu64 "\n", hitCount);
    strcat (send_data, tmp);
    sprintf (tmp, "CacheMiss=%"     PRIu64 "\n", missCount);
@@ -119,9 +58,10 @@ int main (int argc, char** argv) {
 
    send (sock, send_data, LOT, 0);
 
+  //In case that we need to finish the execution 
   } else if (strcmp (recv_data , "QUIT") == OK) {
    die_thread = true;
-   pthread_mutex_unlock (&empty);
+   pthread_mutex_unlock (&mutex_scheduler);
    pthread_join (worker, NULL);
    break;
 
@@ -130,6 +70,92 @@ int main (int argc, char** argv) {
    exit (EXIT_FAILURE);
   }
  }
+}
+
+/*
+ *
+ */
+void* thread_func_disk (void* argv) {
+ while (die_thread != true || queue_scheduler.empty() != true) {
+  while (queue_scheduler.empty() && die_thread != true) 
+   pthread_mutex_lock (&empty);
+  if (die_thread == true)
+   continue;
+
+  Query* query = queue_scheduler.front();
+
+  query->setStartDate();
+  cache.match (static_cast<packet*> (query), hitCount, missCount);
+  query->setFinishedDate();
+
+  queryProcessed++;
+  TotalExecTime += query->getExecTime();
+  TotalWaitTime += query->getWaitTime();
+
+  queue_scheduler.pop();
+ }
+ pthread_exit (EXIT_SUCCESS);
+}
+
+/*
+ *
+ */
+void* thread_func_neighbor (void* argv) {
+
+ pthread_exit (EXIT_SUCCESS);   
+}
+
+/*
+ *
+ */
+void setup_network (char* host_str) {
+ struct sockaddr_in server_addr;  
+ struct hostent *host;
+
+ host = gethostbyname (host_str);
+ if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == FAIL) {
+  perror ("Socket");
+  exit (EXIT_FAILURE);
+ }
+
+ server_addr.sin_family = AF_INET;
+ server_addr.sin_port = htons (port);
+ server_addr.sin_addr = *((struct in_addr *)host->h_addr);
+ bzero (&(server_addr.sin_zero), 8);
+
+ if (connect(sock, (sockaddr*)&server_addr, sizeof(sockaddr)) == -1) {
+  perror ("Connect error");
+  exit (EXIT_FAILURE); 
+ }
+}
+
+//------------------------------------------------------------------//
+//------------------------------------------------------------------//
+//------------------------------------------------------------------//
+
+int main (int argc, char** argv) {
+ int c;  
+ struct timeval start, end;
+ char host_str [32], data_file [256];
+
+ while ((c = getopt (argc, argv, "h:d:p:")) != -1)
+  switch (c) {
+   case 'h': strncpy (host_str, optarg, 32);   break;
+   case 'd': strncpy (data_file, optarg, 256); break;
+   case 'p': port = atoi (optarg);             break;
+  }
+
+ cache.setDataFile (data_file);
+ setup_network (host_str);
+ gettimeofday (&start, NULL);
+
+ pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
+ pthread_mutex_lock (&mutex_neighbor);  /* Initialize the lock to 0 */
+
+ pthread_create (&thread_disk, NULL, thread_func_disk, NULL);
+ pthread_create (&thread_neighbor, NULL, thread_func_neighbor, NULL);
+
+ thread_func_main ();
 
  gettimeofday (&end, NULL);
  cout.width (20);
@@ -137,11 +163,14 @@ int main (int argc, char** argv) {
  cout.flags (ios::scientific);
 
  cout << "-------------------------------" << endl;
- cout << "Recieved: "  << queryRecieves << endl;
- cout << "Processed: " << queryProcessed << endl;
- cout << "CacheHits: " << hitCount << endl;
- cout << "TotalExecTime: " << TotalExecTime << " nanoSeconds" << endl;
- cout << "TotalWaitTime: " << TotalWaitTime << " nanoSeconds" << endl;
- cout << "TotalTime: " << timediff(&end, &start) << " nanoSeconds" << endl;
- close(sock);
+ cout << "Recieved: "  << queryRecieves << " queries" << endl;
+ cout << "Processed: " << queryProcessed << " queries" << endl;
+ cout << "CacheHits: " << hitCount << " diskPages" << endl;
+ cout << "TotalExecTime: " << TotalExecTime << " 10E-6 s" << endl;
+ cout << "TotalWaitTime: " << TotalWaitTime << " 10E-6 s" << endl;
+ cout << "TotalTime: " << timediff(&end, &start) << " 10E-6 s" << endl;
+
+ close (sock);
+
+ return EXIT_SUCCESS;
 }

@@ -2,10 +2,10 @@
 
 Query::Query (const packet& p): packet(p) {
   gettimeofday(&scheduledDate, NULL);
+  key = fid + offset + length;
 }
 
 Query::Query (const Query& that): packet(that) {
-  //queryPoint = that.queryPoint;
   scheduledDate = that.scheduledDate;
   startDate = that.startDate;
   finishedDate = that.finishedDate;
