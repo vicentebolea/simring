@@ -6,7 +6,7 @@ using namespace std;
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
-LRUcache cache(CACHESIZE); 
+LRUcache cache (CACHESIZE); 
 
 int sock, port;  
 bool die_thread = false;
@@ -14,60 +14,63 @@ uint32_t queryRecieves = 0, queryProcessed = 0;
 uint64_t hitCount = 0, missCount = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0;
 
+pthread_cond_t cond_scheduler_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_neighbor_empty  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex_scheduler = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_neighbor  = PTHREAD_MUTEX_INITIALIZER;
+
 pthread_t thread_disk;
 pthread_t thread_neighbor;
+pthread_t thread_scheduler;
 
 /*
  *
  */
-void thread_func_main (void) {
+void thread_func_scheduler (void* argv) {
  while (true) {
   char recv_data[LOT];
   recv_msg (sock, recv_data);
 
   //When a new query arrive
-  if (strcmp(recv_data, "QUERY") == OK) {
-   Query* aux = new Query();
-   if (sizeof(packet) != recv(sock, static_cast<packet*>(aux), sizeof(packet), MSG_WAITALL))
+  if (strcmp (recv_data, "QUERY") == OK) {
+   Query aux;
+   int ret = recv (sock, static_cast<packet*>(&aux), sizeof packet, MSG_WAITALL);
+   if (ret != sizeof packet)
     perror ("Receiving data");
 
-   queue_scheduler.push (*aux);
+   queue_scheduler.push (aux);
    queryRecieves++;
-   delete aux;
 
    pthread_mutex_unlock (&mutex_scheduler);
 
   //When it ask for information
-  } else if (strcmp (recv_data , "INFO") == OK) {
-   char send_data[LOT] = "", tmp[256];
-   while (queue_scheduler.empty () != true)
+  } else if (strcmp (recv_data, "INFO") == OK) {
+   char send_data [LOT] = "", tmp [256];
+   while (!queue_scheduler.empty ())
     sleep (1);
 
    sprintf (tmp, "CacheHit=%"      PRIu64 "\n", hitCount);
-   strcat (send_data, tmp);
+   strncat (send_data, tmp, 256);
    sprintf (tmp, "CacheMiss=%"     PRIu64 "\n", missCount);
-   strcat (send_data, tmp);
+   strncat (send_data, tmp, 256);
    sprintf (tmp, "QueryCount=%"    PRIu32 "\n", queryProcessed);
-   strcat (send_data, tmp);
+   strncat (send_data, tmp, 256);
    sprintf (tmp, "TotalExecTime=%" PRIu64 "\n", TotalExecTime);
-   strcat (send_data, tmp);
+   strncat (send_data, tmp, 256);
    sprintf (tmp, "TotalWaitTime=%" PRIu64 "\n", TotalWaitTime);
-   strcat (send_data, tmp);
+   strncat (send_data, tmp, 256);
 
    send (sock, send_data, LOT, 0);
 
   //In case that we need to finish the execution 
-  } else if (strcmp (recv_data , "QUIT") == OK) {
+  } else if (strcmp (recv_data, "QUIT") == OK) {
    die_thread = true;
    pthread_mutex_unlock (&mutex_scheduler);
-   pthread_join (worker, NULL);
-   break;
+   pthread_exit (EXIT_SUCCESS);
 
   } else {
    cerr << "Unknown message received." << endl;
-   exit (EXIT_FAILURE);
+   pthread_exit (EXIT_SUCCESS);
   }
  }
 }
@@ -76,25 +79,35 @@ void thread_func_main (void) {
  *
  */
 void* thread_func_disk (void* argv) {
- while (die_thread != true || queue_scheduler.empty() != true) {
-  while (queue_scheduler.empty() && die_thread != true) 
-   pthread_mutex_lock (&empty);
-  if (die_thread == true)
-   continue;
+ while (!die_thread) 
+ {
+  pthread_mutex_lock (&mutex_scheduler);      //Waiting for producer 1
+  while (queue_scheduler.empty()) 
+   pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler);
 
-  Query* query = queue_scheduler.front();
+  pthread_mutex_lock (&mutex_neighbor);       //Waiting for producer 2
+  while (queue_neighbor.empty()) 
+   pthread_cond_wait (&cond_neighbor_empty, &mutex_neighbor);
 
-  query->setStartDate();
-  cache.match (static_cast<packet*> (query), hitCount, missCount);
-  query->setFinishedDate();
+  if (die_thread) break;
 
-  queryProcessed++;
-  TotalExecTime += query->getExecTime();
-  TotalWaitTime += query->getWaitTime();
+  //--------------Start of the critical section--------------------//
+  Query* query = queue_scheduler.front();                          //
+                                                                   //
+  query->setStartDate();                                           //
+  cache.match (static_cast<packet*> (query), hitCount, missCount); //
+  query->setFinishedDate();                                        //
+                                                                   //
+  queryProcessed++;                                                //
+  TotalExecTime += query->getExecTime();                           //
+  TotalWaitTime += query->getWaitTime();                           //
+                                                                   //
+  queue_scheduler.pop();                                           //
+  //-------------End of the crtical section------------------------//
 
-  queue_scheduler.pop();
+  pthread_mutex_unlock (&empty_neighbor);
+  pthread_mutex_unlock (&empty_scheduler);
  }
- pthread_exit (EXIT_SUCCESS);
 }
 
 /*
@@ -102,7 +115,6 @@ void* thread_func_disk (void* argv) {
  */
 void* thread_func_neighbor (void* argv) {
 
- pthread_exit (EXIT_SUCCESS);   
 }
 
 /*
@@ -130,7 +142,7 @@ void setup_network (char* host_str) {
 }
 
 //------------------------------------------------------------------//
-//------------------------------------------------------------------//
+//-------------MAIN FUNCTION, MAIN THREAD---------------------------//
 //------------------------------------------------------------------//
 
 int main (int argc, char** argv) {
@@ -152,17 +164,20 @@ int main (int argc, char** argv) {
  pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
  pthread_mutex_lock (&mutex_neighbor);  /* Initialize the lock to 0 */
 
- pthread_create (&thread_disk, NULL, thread_func_disk, NULL);
- pthread_create (&thread_neighbor, NULL, thread_func_neighbor, NULL);
+ pthread_create (&thread_disk,      NULL, thread_func_disk,      NULL);
+ pthread_create (&thread_neighbor,  NULL, thread_func_neighbor,  NULL);
+ pthread_create (&thread_scheduler, NULL, thread_func_scheduler, NULL);
 
- thread_func_main ();
+ pthread_join (thread_scheduler, NULL);
+ pthread_join (thread_disk,      NULL);
+ pthread_join (thread_neighbor,  NULL);
 
  gettimeofday (&end, NULL);
  cout.width (20);
  cout.fill ();
  cout.flags (ios::scientific);
 
- cout << "-------------------------------" << endl;
+ cout << "------------------------------------------" << endl;
  cout << "Recieved: "  << queryRecieves << " queries" << endl;
  cout << "Processed: " << queryProcessed << " queries" << endl;
  cout << "CacheHits: " << hitCount << " diskPages" << endl;
