@@ -71,6 +71,15 @@
 
 using namespace std;
 
+enum input {
+ HIT           = 0x00, 
+ MISS          = 0x01, 
+ QUERIES       = 0x02, 
+ TOTALMISS     = 0x03,
+ EXECTIME      = 0x04, 
+ WAITTIME      = 0x05, 
+};
+
 long *toArray (char*);
 void toArray (char*,long*);
 double toDouble (long*);
@@ -79,8 +88,6 @@ uint64_t timediff (struct timeval*, struct timeval*);
 void send_msg (int, char*, int);
 void recv_msg (int, char*);
 int poisson (double);
-
-enum type {query = 001, info = 002, quit = 004};
 
 /** @brief Class which represent an abstract packet which
  * will be send by sockets

@@ -40,43 +40,42 @@ inline int hash (packet* p) {
 
 void receive_all (void) {
 	char recv_data[LOT];
-
 	char INFO[] = "INFO";
-	for(int i = 0; i < NSERVERS; i++)
+
+	for (int i = 0; i < NSERVERS; i++)
 		send_msg (connected[i], INFO, strlen(INFO));  
 
-	puts ("Collecting the results");
-	for(int i = 0; i < NSERVERS; i++)
-	{  
+	cout << "Collecting the results" << endl;
+	for (int i = 0; i < NSERVERS; i++) {  
+
 		bzero (recv_data, LOT);
 		recv (connected[i], recv_data, LOT, MSG_WAITALL);
 
-		for (char *key= strtok(recv_data, "=\n"); key != NULL; key= strtok(NULL, "=\n"))
-		{ 
-			char *val = strtok(NULL, "=\n");
+		for (char *key= strtok(recv_data, "=\n"); key != NULL; key= strtok(NULL, "=\n")) { 
+			char *val = strtok (NULL, "=\n");
 
-			if (strcmp(key, "CacheHit") == 0)
-				TotalCacheHit += strtoul(val, NULL, 10);
+			if (strcmp (key, "CacheHit") == 0)
+				TotalCacheHit += strtoul (val, NULL, 10);
 
-			else if (strcmp(key, "CacheMiss") == 0)
-				TotalCacheMiss += strtoul(val, NULL, 10);
+			else if (strcmp (key, "CacheMiss") == 0)
+				TotalCacheMiss += strtoul (val, NULL, 10);
 
-			else if (strcmp(key, "QueryCount") == 0)
-				numQuery += strtoul(val, NULL, 10);
+			else if (strcmp (key, "QueryCount") == 0)
+				numQuery += strtoul (val, NULL, 10);
 
-			else if (strcmp(key, "TotalExecTime") == 0) {
-				TotalExecTime += strtoull(val, NULL, 10);
+			else if (strcmp (key, "TotalExecTime") == 0) {
+				TotalExecTime += strtoull (val, NULL, 10);
 
-				if (strtoull(val, NULL, 0) > MaxExecTime)
-					MaxExecTime = strtoull(val, NULL, 10);
+				if (strtoull (val, NULL, 0) > MaxExecTime)
+					MaxExecTime = strtoull (val, NULL, 10);
 			}
 			else if (strcmp(key, "TotalWaitTime") == 0) {
-				TotalWaitTime += strtoull(val, NULL, 10);
+				TotalWaitTime += strtoull (val, NULL, 10);
 
-				if (strtoull(val, NULL, 0) > MaxWaitTime)
-					MaxWaitTime = strtoull(val, NULL, 10);
+				if (strtoull (val, NULL, 0) > MaxWaitTime)
+					MaxWaitTime = strtoull (val, NULL, 10);
 			}
-			else if (strcmp(key, "OK") != 0)
+			else if (strcmp (key, "OK") != 0)
 				cerr << "[" << recv_data << "] @ " << i << endl;
 		}
 	}
@@ -143,8 +142,7 @@ void catchSignal (int Signal) {
  exit (EXIT_FAILURE);
 }
 
-int main (int argc, char** argv)
-{
+int main (int argc, char** argv) {
  struct sockaddr_in* client_addr;    
  int c, nservers;
  uint32_t nqueries = 0;
@@ -153,7 +151,7 @@ int main (int argc, char** argv)
  struct timeval start, end;
  server** ema;
 
- while ((c = getopt(argc, argv, "q:n:")) != -1)
+ while ((c = getopt(argc, const_cast<char**> (argv), "q:n:")) != -1)
   switch (c) {
    case 'q': nqueries = atoi(optarg); break;
    case 'n': nservers = atoi(optarg); break;
@@ -170,7 +168,7 @@ int main (int argc, char** argv)
 
  wakeUpServer();
 
- for(int i = 0; i < nservers; i++) {  
+ for (int i = 0; i < nservers; i++) {  
   socklen_t sin_size = sizeof(struct sockaddr_in);
   connected[i] = accept (sock, (struct sockaddr *)&client_addr[i], &sin_size);
   printf ("I got a connection from %s\n", inet_ntoa(client_addr[i].sin_addr)); 

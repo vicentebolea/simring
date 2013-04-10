@@ -1,3 +1,8 @@
+/*
+ *
+ *
+ */
+
 #include <uniDQP.h>
 #include <pthread.h>
 #include <queue>
@@ -8,8 +13,8 @@ queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
 LRUcache cache (CACHESIZE); 
 
-int sock, port;  
-bool die_thread = false;
+int sock, sock_left, sock_right, port;  
+bool die_thread = false, panic = false;
 uint32_t queryRecieves = 0, queryProcessed = 0;
 uint64_t hitCount = 0, missCount = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0;
@@ -24,11 +29,14 @@ pthread_t thread_neighbor;
 pthread_t thread_scheduler;
 
 /*
+ * @brief  Thread function to receive queries from the scheduler.
+ *         This function can be seen as one of the producers.
+ * @args   Dummy parameter
  *
  */
 void thread_func_scheduler (void* argv) {
- while (true) {
-  char recv_data[LOT];
+ 
+ for (char recv_data [LOT]; !panic; bzero (&recv_data, LOT)) {
   recv_msg (sock, recv_data);
 
   //When a new query arrive
@@ -66,21 +74,58 @@ void thread_func_scheduler (void* argv) {
   } else if (strcmp (recv_data, "QUIT") == OK) {
    die_thread = true;
    pthread_mutex_unlock (&mutex_scheduler);
-   pthread_exit (EXIT_SUCCESS);
+   panic = true;
 
   } else {
    cerr << "Unknown message received." << endl;
-   pthread_exit (EXIT_SUCCESS);
+   panic = true;
   }
  }
 }
 
+
 /*
+ * @brief  Thread function to receive queries from the scheduler.
+ *         This function can be seen as one of the producers.
+ * @args   Dummy parameter
  *
  */
+void* thread_func_neighbor (void* argv) {
+ while (!panic) {
+  char recv_data [LOT];
+  recv_msg (sock, recv_data);
+
+  //When a new query arrive
+  if (strcmp (recv_data, "QUERY") == OK) {
+   Query aux;
+   int ret = recv (sock, static_cast<packet*>(&aux), sizeof packet, MSG_WAITALL);
+   if (ret != sizeof packet)
+    perror ("Receiving data");
+
+   queue_neighbor.push (aux);
+   queryRecieves++;
+
+   pthread_mutex_unlock (&mutex_neighbor);
+
+   //When it ask for information
+  } else {
+   cerr << "Unknown message received from peer server" << endl;
+   panic = true;
+  }
+ }
+}
+
+
+/*
+ * @brief  Function thread to compute the query.
+ *         It can be seen as the 2 producters and one consumer
+ *         problem. 
+ *
+ * @args   Dummy parameter
+ */
 void* thread_func_disk (void* argv) {
- while (!die_thread) 
- {
+ while (!panic) {
+
   pthread_mutex_lock (&mutex_scheduler);      //Waiting for producer 1
   while (queue_scheduler.empty()) 
    pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler);
@@ -89,20 +134,20 @@ void* thread_func_disk (void* argv) {
   while (queue_neighbor.empty()) 
    pthread_cond_wait (&cond_neighbor_empty, &mutex_neighbor);
 
-  if (die_thread) break;
+  if (panic) break;
 
   //--------------Start of the critical section--------------------//
-  Query* query = queue_scheduler.front();                          //
-                                                                   //
-  query->setStartDate();                                           //
-  cache.match (static_cast<packet*> (query), hitCount, missCount); //
-  query->setFinishedDate();                                        //
-                                                                   //
-  queryProcessed++;                                                //
-  TotalExecTime += query->getExecTime();                           //
-  TotalWaitTime += query->getWaitTime();                           //
-                                                                   //
-  queue_scheduler.pop();                                           //
+  Query* query = queue_scheduler.front();                          
+
+  query->setStartDate();                                           
+  cache.match (static_cast<packet*> (query), hitCount, missCount); 
+  query->setFinishedDate();                                        
+
+  queryProcessed++;                                                
+  TotalExecTime += query->getExecTime();                           
+  TotalWaitTime += query->getWaitTime();                           
+
+  queue_scheduler.pop();                                           
   //-------------End of the crtical section------------------------//
 
   pthread_mutex_unlock (&empty_neighbor);
@@ -110,17 +155,75 @@ void* thread_func_disk (void* argv) {
  }
 }
 
+
 /*
  *
  */
-void* thread_func_neighbor (void* argv) {
+bool query_send_peer (packet& p) {
+ //
+ // if (p < lower_boundary)
+ //  send (sock_left);
+ // else 
+ //  send (sock_right);
+ //
+ return true;
+}
+
+
+/*
+ *
+ */
+void setup_server_peer (int port) {
 
 }
 
+
 /*
  *
  */
-void setup_network (char* host_str) {
+void setup_client_peer (int port, char* left, char* right) {
+ struct sockaddr_in server_addr_left;  
+ struct sockaddr_in server_addr_right;  
+ struct hostent* host_left, host_right;
+
+ host_left = gethostbyname (left);
+ if ((sock_left = socket (AF_INET, SOCK_STREAM, 0)) == FAIL) {
+  perror ("Socket");
+  exit (EXIT_FAILURE);
+ }
+
+ server_addr_left.sin_family = AF_INET;
+ server_addr_left.sin_port = htons (port);
+ server_addr_left.sin_addr = *((struct in_addr *)host_left->h_addr);
+ bzero (&(server_addr_left.sin_zero), 8);
+
+ if (connect(sock_left, (sockaddr*)&server_addr_left, sizeof(sockaddr)) == -1) {
+  perror ("Connect error");
+  exit (EXIT_FAILURE); 
+ }
+
+ host_right = gethostbyname (right);
+ if ((sock_right = socket (AF_INET, SOCK_STREAM, 0)) == FAIL) {
+  perror ("Socket");
+  exit (EXIT_FAILURE);
+ }
+
+ server_addr_right.sin_family = AF_INET;
+ server_addr_right.sin_port = htons (port);
+ server_addr_right.sin_addr = *((struct in_addr *)host_right->h_addr);
+ bzero (&(server_addr_right.sin_zero), 8);
+
+ if (connect(sock_right, (sockaddr*)&server_addr_right, sizeof(sockaddr)) == -1) {
+  perror ("Connect error");
+  exit (EXIT_FAILURE); 
+ }
+}
+
+
+/*
+ *
+ */
+void setup_client_scheduler (char* host_str) {
  struct sockaddr_in server_addr;  
  struct hostent *host;
 
@@ -145,20 +248,25 @@ void setup_network (char* host_str) {
 //-------------MAIN FUNCTION, MAIN THREAD---------------------------//
 //------------------------------------------------------------------//
 
-int main (int argc, char** argv) {
+int main (int argc, const char** argv) {
  int c;  
  struct timeval start, end;
  char host_str [32], data_file [256];
+ char peer_right [32], peer_left [32];
 
- while ((c = getopt (argc, argv, "h:d:p:")) != -1)
+ do {
   switch (c) {
    case 'h': strncpy (host_str, optarg, 32);   break;
+   case 'r': strncpy (peer_right, optarg, 32); break;
+   case 'l': strncpy (peer_left, optarg, 32);  break;
    case 'd': strncpy (data_file, optarg, 256); break;
    case 'p': port = atoi (optarg);             break;
   }
+  c = getopt (argc, const_cast<char**> (argv), "h:d:p:r:l:");
+ } while (c != -1);
 
  cache.setDataFile (data_file);
- setup_network (host_str);
+ setup_client_scheduler(host_str);
  gettimeofday (&start, NULL);
 
  pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
