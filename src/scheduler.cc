@@ -11,8 +11,8 @@
 
 using namespace std;
 
-int sock;
-int16_t connected[NSERVERS];
+int sock, port;
+int16_t connected [NSERVERS];
 uint64_t TotalCacheHit = 0, TotalCacheMiss = 0,  numQuery = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0; 
 uint64_t AveExecTime = 0, AveWaitTime = 0; 
@@ -121,7 +121,7 @@ void wakeUpServer (void)
   exit (EXIT_FAILURE);
  }
  server_addr.sin_family = AF_INET;
- server_addr.sin_port = htons(PORT);
+ server_addr.sin_port = htons (port);
  server_addr.sin_addr.s_addr = INADDR_ANY;
  bzero (&(server_addr.sin_zero),8);
 
@@ -143,18 +143,20 @@ void catchSignal (int Signal) {
 }
 
 int main (int argc, char** argv) {
- struct sockaddr_in* client_addr;    
  int c, nservers;
  uint32_t nqueries = 0;
- uint32_t* queryCount;
  uint32_t cnt = 0, time = 0;
  struct timeval start, end;
+
+ struct sockaddr_in* client_addr;    
+ uint32_t* queryCount;
  server** ema;
 
- while ((c = getopt(argc, const_cast<char**> (argv), "q:n:")) != -1)
+ while ((c = getopt(argc, const_cast<char**> (argv), "q:n:p:")) != -1)
   switch (c) {
-   case 'q': nqueries = atoi(optarg); break;
-   case 'n': nservers = atoi(optarg); break;
+   case 'q': nqueries = atoi (optarg); break;
+   case 'n': nservers = atoi (optarg); break;
+   case 'p': port = atoi (optarg);     break;
   }
 
  //Dynamic memory

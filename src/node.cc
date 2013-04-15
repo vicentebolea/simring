@@ -20,6 +20,7 @@ uint64_t hitCount = 0, missCount = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0;
 
 pthread_cond_t cond_scheduler_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_scheduler_full  = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_neighbor_empty  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex_scheduler = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_neighbor  = PTHREAD_MUTEX_INITIALIZER;
@@ -42,6 +43,8 @@ void thread_func_scheduler (void* argv) {
   //When a new query arrive
   if (strcmp (recv_data, "QUERY") == OK) {
    Query aux;
+   pthread_mutex_lock (&mutex_scheduler);
+
    int ret = recv (sock, static_cast<packet*>(&aux), sizeof packet, MSG_WAITALL);
    if (ret != sizeof packet)
     perror ("Receiving data");
@@ -49,13 +52,19 @@ void thread_func_scheduler (void* argv) {
    queue_scheduler.push (aux);
    queryRecieves++;
 
+   pthread_cond_signal (&cond_scheduler_empty);
    pthread_mutex_unlock (&mutex_scheduler);
 
   //When it ask for information
   } else if (strcmp (recv_data, "INFO") == OK) {
    char send_data [LOT] = "", tmp [256];
+
+   pthread_mutex_lock (&mutex_scheduler);
+
    while (!queue_scheduler.empty ())
-    sleep (1);
+    pthread_cond_wait (&cond_scheduler_full, &mutex_scheduler);
+
+   pthread_mutex_unlock (&mutex_scheduler);
 
    sprintf (tmp, "CacheHit=%"      PRIu64 "\n", hitCount);
    strncat (send_data, tmp, 256);
@@ -98,6 +107,8 @@ void* thread_func_neighbor (void* argv) {
   //When a new query arrive
   if (strcmp (recv_data, "QUERY") == OK) {
    Query aux;
+   pthread_mutex_lock (&mutex_neighbor);
+
    int ret = recv (sock, static_cast<packet*>(&aux), sizeof packet, MSG_WAITALL);
    if (ret != sizeof packet)
     perror ("Receiving data");
@@ -105,6 +116,7 @@ void* thread_func_neighbor (void* argv) {
    queue_neighbor.push (aux);
    queryRecieves++;
 
+   pthread_cond_signal (&cond_neighbor_empty);
    pthread_mutex_unlock (&mutex_neighbor);
 
    //When it ask for information
@@ -149,6 +161,9 @@ void* thread_func_disk (void* argv) {
 
   queue_scheduler.pop();                                           
   //-------------End of the crtical section------------------------//
+
+  if (queue_empty.empty())
+   pthread_cond_signal (&cond_scheduler_full);
 
   pthread_mutex_unlock (&empty_neighbor);
   pthread_mutex_unlock (&empty_scheduler);
@@ -225,7 +240,7 @@ void setup_client_peer (int port, char* left, char* right) {
  */
 void setup_client_scheduler (char* host_str) {
  struct sockaddr_in server_addr;  
- struct hostent *host;
+ struct hostent* host;
 
  host = gethostbyname (host_str);
  if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == FAIL) {
@@ -249,7 +264,7 @@ void setup_client_scheduler (char* host_str) {
 //------------------------------------------------------------------//
 
 int main (int argc, const char** argv) {
- int c;  
+ int c = 0;  
  struct timeval start, end;
  char host_str [32], data_file [256];
  char peer_right [32], peer_left [32];
@@ -266,7 +281,7 @@ int main (int argc, const char** argv) {
  } while (c != -1);
 
  cache.setDataFile (data_file);
- setup_client_scheduler(host_str);
+ setup_client_scheduler (host_str);
  gettimeofday (&start, NULL);
 
  pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
