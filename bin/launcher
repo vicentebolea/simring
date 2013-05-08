@@ -40,17 +40,9 @@ declare -a PIDS
 declare -a TEMP_FILE
 
 case "$1" in 
-"BDEMA") 	
- scheduler=$bin'scheduler_bdema'
-# distribution_log=$log'distribution.result'
- ;;
-
-"HASH") 	
- scheduler=$bin'scheduler_hash'
-# distribution_log=$log'hashdistribution.result' 
- ;;
-
-"KILL") killapps ;; 
+"BDEMA") scheduler=$bin'scheduler_bdema' ;;
+"HASH")  scheduler=$bin'scheduler_hash'  ;; 
+"KILL")  killapps                        ;; 
 
 *)
  echo "Introduce 'launcher BDEMA|HASH|KILL' "

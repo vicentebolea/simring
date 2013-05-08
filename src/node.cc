@@ -1,4 +1,6 @@
 /*
+ * @file This file contains the source code of the application 
+ *       which will run in each server 
  *
  *
  */
