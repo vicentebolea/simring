@@ -136,6 +136,7 @@ void* thread_func_scheduler (void* argv) {
  */
 void* thread_func_neighbor (void* argv) {
 	socklen_t s = sizeof (sockaddr);
+
 	while (!panic) {
 		char recv_data [LOT];
 		recv_msg (sock, recv_data);
@@ -235,7 +236,7 @@ bool query_send_peer (packet& p) {
  * @param 
  */
 void setup_server_peer (int port) {
-	CHECK (sock_server = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+	EXIT_IF (sock_server = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
 	sa_server_peer.sin_family      = AF_INET;
 	sa_server_peer.sin_port        = htons (port);
@@ -250,8 +251,8 @@ void setup_server_peer (int port) {
  */
 void setup_client_peer (const int port, const char* left, const char* right) {
 
-	CHECK (sock_left = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
-	CHECK (sock_right = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+	EXIT_IF (sock_left = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+	EXIT_IF (sock_right = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
 	addr_left_peer.sin_family      = AF_INET;
 	addr_left_peer.sin_port        = htons (port);
@@ -272,15 +273,16 @@ void setup_client_peer (const int port, const char* left, const char* right) {
  */
 void setup_client_scheduler (const char* host_str) {
 	struct sockaddr_in server_addr;  
+	socklen_t s = sizeof (sockaddr);
 
-	CHECK (sock = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
+	EXIT_IF (sock = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
 
 	server_addr.sin_family      = AF_INET;
 	server_addr.sin_port        = htons (port);
 	server_addr.sin_addr.s_addr = inet_addr (host_str);
 	bzero (&(server_addr.sin_zero), 8);
 
-	CHECK (connect (sock, (sockaddr*)&server_addr, sizeof(sockaddr)), "CONNECT");
+	EXIT_IF (connect (sock, (sockaddr*)&server_addr, s), "CONNECT");
 }
 
 /*

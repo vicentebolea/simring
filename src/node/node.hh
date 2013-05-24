@@ -25,7 +25,7 @@
 
 using namespace std;
 
-#define CHECK(x,m) if ((x) == -1) {error (EXIT_FAILURE, errno, (m));}
+#define EXIT_IF(x,m) if ((x) == -1) {error (EXIT_FAILURE, errno, (m));}
 
 extern int sock, sock_left, sock_right, port;  
 extern bool die_thread;
