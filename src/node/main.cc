@@ -4,14 +4,16 @@
  *
  *
  */
-#include "node.h"
+#include "node.hh"
 
 int main (int argc, const char** argv) {
- struct timeval start, end;
- parse_args (const_char<char**> (argv));
+ struct timeval start;
+ struct timeval end;
 
- cache.setDataFile (data_file);
+ parse_args (argc, argv);
  setup_client_scheduler (host_str);
+ setup_server_peer (port);
+ setup_client_peer (port, peer_right, peer_left);
  gettimeofday (&start, NULL);
 
  pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */

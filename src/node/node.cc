@@ -4,7 +4,62 @@
  *
  *
  */
-#include "node.h"
+#include "node.hh"
+
+queue<Query> queue_scheduler;
+queue<Query> queue_neighbor;
+LRUcache cache (CACHESIZE); 
+
+int sock, sock_left, sock_right, port, sock_server;  
+int lower_boundary;
+int upper_boundary;
+bool die_thread = false;
+bool panic = false;
+
+uint32_t queryRecieves = 0;
+uint32_t queryProcessed = 0;
+uint64_t hitCount = 0;
+uint64_t missCount = 0;
+uint64_t TotalExecTime = 0;
+uint64_t TotalWaitTime = 0;
+
+pthread_cond_t  cond_scheduler_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t  cond_scheduler_full  = PTHREAD_COND_INITIALIZER;
+pthread_cond_t  cond_neighbor_empty  = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex_scheduler      = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_neighbor       = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_t thread_disk;
+pthread_t thread_neighbor;
+pthread_t thread_scheduler;
+
+char host_str [32];
+char data_file [256];
+char peer_right [32];
+char peer_left [32];
+
+struct sockaddr_in addr_left_peer; 
+struct sockaddr_in addr_right_peer;  
+struct sockaddr_in sa_server_peer;
+
+#ifdef _DEBUG
+
+ssize_t (*_recv) (int, void*, size_t, int)       = recv_mock;
+ssize_t (*_send) (int, const void*, size_t, int) = send_mock;
+ssize_t (*_recvfrom) (int, void*, size_t, sockaddr*, socklen_t*) = recvfrom_mock;
+ssize_t (*_sendto) (int, const void*, size_t, sockaddr*, socklen_t*) = sendto_mock;
+
+#else
+
+ssize_t (*_recv) (int, void*, size_t, int) = recv;
+ssize_t (*_send) (int, const void*, size_t, int) = send;
+
+#endif
+
+//---------------------------------------------------------------------//
+//-----------END OF VARIABLES, FUNTIONS DEFINITIONS--------------------//
+//---------------------------------------------------------------------//
+
 
 /*
  * @brief  Thread function to receive queries from the scheduler.
@@ -13,6 +68,7 @@
  *
  */
 void* thread_func_scheduler (void* argv) {
+	cache.setDataFile (data_file);
 
 	for (char recv_data [LOT]; !panic; bzero (&recv_data, LOT)) {
 		recv_msg (sock, recv_data);
@@ -22,8 +78,9 @@ void* thread_func_scheduler (void* argv) {
 			Query aux;
 			pthread_mutex_lock (&mutex_scheduler);
 
-			int ret = _recv (sock, static_cast<packet*>(&aux), sizeof packet, MSG_WAITALL);
-			if (ret != sizeof packet)
+			int ret = _recv (sock, static_cast<packet*>(&aux), 
+					sizeof(packet), MSG_WAITALL);
+			if (ret != sizeof (packet))
 				perror ("Receiving data");
 
 			queue_scheduler.push (aux);
@@ -67,6 +124,7 @@ void* thread_func_scheduler (void* argv) {
 			panic = true;
 		}
 	}
+	pthread_exit (EXIT_SUCCESS);
 }
 
 
@@ -77,6 +135,7 @@ void* thread_func_scheduler (void* argv) {
  *
  */
 void* thread_func_neighbor (void* argv) {
+	socklen_t s = sizeof (sockaddr);
 	while (!panic) {
 		char recv_data [LOT];
 		recv_msg (sock, recv_data);
@@ -86,9 +145,11 @@ void* thread_func_neighbor (void* argv) {
 			Query aux;
 			pthread_mutex_lock (&mutex_neighbor);
 
-			int ret = recv (sock, static_cast<packet*>(&aux), sizeof packet, MSG_WAITALL);
+			int ret = recvfrom (sock_server, static_cast<packet*>(&aux),
+					sizeof (packet), MSG_WAITALL,
+					(sockaddr*)&sa_server_peer, &s);
 
-			if (ret != sizeof packet) perror ("Receiving data");
+			if (ret != sizeof (packet)) perror ("Receiving data");
 
 			queue_neighbor.push (aux);
 			queryRecieves++;
@@ -102,6 +163,7 @@ void* thread_func_neighbor (void* argv) {
 			panic = true;
 		}
 	}
+	pthread_exit (EXIT_SUCCESS);
 }
 
 
@@ -126,24 +188,25 @@ void* thread_func_disk (void* argv) {
 		if (panic) break;
 
 		//--------------Start of the critical section--------------------//
-		Query* query = queue_scheduler.front();                          
+		Query query = queue_scheduler.front();                          
 
-		query->setStartDate();                                           
-		cache.match (static_cast<packet*> (query), hitCount, missCount); 
-		query->setFinishedDate();                                        
+		query.setStartDate();                                           
+		cache.match (static_cast<packet&> (query), &hitCount, &missCount); 
+		query.setFinishedDate();                                        
 
 		queryProcessed++;                                                
-		TotalExecTime += query->getExecTime();                           
-		TotalWaitTime += query->getWaitTime();                           
+		TotalExecTime += query.getExecTime();                           
+		TotalWaitTime += query.getWaitTime();                           
 
 		queue_scheduler.pop();                                           
 		//-------------End of the crtical section------------------------//
 
-		queue_empty.empty () && pthread_cond_signal (&cond_scheduler_full);
+		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);
 
-		pthread_mutex_unlock (&empty_neighbor);
-		pthread_mutex_unlock (&empty_scheduler);
+		pthread_mutex_unlock (&mutex_neighbor);
+		pthread_mutex_unlock (&mutex_scheduler);
 	}
+	pthread_exit (EXIT_SUCCESS);
 }
 
 /*
@@ -152,13 +215,32 @@ void* thread_func_disk (void* argv) {
  * @param 
  */
 bool query_send_peer (packet& p) {
-	//
-	// if (p < lower_boundary)
-	//  _send (sock_left);
-	// else 
-	//  _send (sock_right);
- //
- return true;
+	socklen_t s = sizeof (struct sockaddr);	
+
+	if (true) //! :TODO:
+		sendto (sock_left, &p, sizeof (packet), 0, (sockaddr*)&addr_left_peer, s);
+	else 
+		sendto (sock_right, &p, sizeof (packet), 0, (sockaddr*)&addr_right_peer, s);
+
+	return true;
+}
+
+//---------------------------------------------------------------------//
+//-----------SETTING UP FUNCTIONS--------------------------------------//
+//---------------------------------------------------------------------//
+
+/*
+ * @brief
+ * @param 
+ * @param 
+ */
+void setup_server_peer (int port) {
+	CHECK (sock_server = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+
+	sa_server_peer.sin_family      = AF_INET;
+	sa_server_peer.sin_port        = htons (port);
+	sa_server_peer.sin_addr.s_addr = inet_addr (INADDR_ANY);
+	bzero (&(sa_server_peer.sin_zero), 8);
 }
 
 /*
@@ -166,35 +248,20 @@ bool query_send_peer (packet& p) {
  * @param 
  * @param 
  */
-void setup_server_peer (int port) {}
-
-/*
- * @brief
- * @param 
- * @param 
- */
 void setup_client_peer (const int port, const char* left, const char* right) {
- struct sockaddr_in server_addr_left;  
- struct sockaddr_in server_addr_right;  
- size_t s = sizeof (sockaddr);
 
- CHECK (sock_left = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
+	CHECK (sock_left = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+	CHECK (sock_right = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
- server_addr_left.sin_family = AF_INET;
- server_addr_left.sin_port   = htons (port);
- server_addr_left.sin_addr   = inet_addr (left);
- bzero (&(server_addr_left.sin_zero), 8);
+	addr_left_peer.sin_family      = AF_INET;
+	addr_left_peer.sin_port        = htons (port);
+	addr_left_peer.sin_addr.s_addr = inet_addr (left);
+	bzero (&(addr_left_peer.sin_zero), 8);
 
- CHECK (connect (sock_left, (sockaddr*)&server_addr_left, s), "CONNECT");
-
- CHECK (sock_right = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
-
- server_addr_right.sin_family = AF_INET;
- server_addr_right.sin_port   = htons (port);
- server_addr_right.sin_addr   = inet_addr (right);
- bzero (&(server_addr_right.sin_zero), 8);
-
- CHECK (connect (sock_right, (sockaddr*)&server_addr_right, s), "CONNECT");
+	addr_right_peer.sin_family      = AF_INET;
+	addr_right_peer.sin_port        = htons (port);
+	addr_right_peer.sin_addr.s_addr = inet_addr (right);
+	bzero (&(addr_right_peer.sin_zero), 8);
 }
 
 
@@ -204,22 +271,22 @@ void setup_client_peer (const int port, const char* left, const char* right) {
  * @param 
  */
 void setup_client_scheduler (const char* host_str) {
- struct sockaddr_in server_addr;  
+	struct sockaddr_in server_addr;  
 
- CHECK (sock = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
+	CHECK (sock = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
 
- server_addr.sin_family = AF_INET;
- server_addr.sin_port   = htons (port);
- server_addr.sin_addr   = inet_addr (host_str);
- bzero (&(server_addr.sin_zero), 8);
+	server_addr.sin_family      = AF_INET;
+	server_addr.sin_port        = htons (port);
+	server_addr.sin_addr.s_addr = inet_addr (host_str);
+	bzero (&(server_addr.sin_zero), 8);
 
- CHECK (connect (sock, (sockaddr*)&server_addr, sizeof(sockaddr)), "CONNECT");
+	CHECK (connect (sock, (sockaddr*)&server_addr, sizeof(sockaddr)), "CONNECT");
 }
 
 /*
- * @brief
- * @param 
- * @param 
+ * @brief parse the command line options
+ * @param number or args
+ * @param array of args 
  */
 void parse_args (int argc, const char** argv) {
 	int c = 0;  
