@@ -5,6 +5,7 @@ bin/scheduler_bdema
 bin/scheduler_hash
 
 # Other files and folders
+*.o
 data/
 tmp/
 log/
