@@ -10,7 +10,7 @@ queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
 LRUcache cache (CACHESIZE); 
 
-int sock, sock_left, sock_right, port, sock_server;  
+int sock, sock_left, sock_right, port = 0, sock_server;  
 int lower_boundary;
 int upper_boundary;
 bool die_thread = false;
@@ -33,28 +33,18 @@ pthread_t thread_disk;
 pthread_t thread_neighbor;
 pthread_t thread_scheduler;
 
-char host_str [32];
-char data_file [256];
-char peer_right [32];
-char peer_left [32];
+char host_str [32]   = {0};
+char data_file [256] = {0};
+char peer_right [32] = {0};
+char peer_left [32]  = {0};
 
 struct sockaddr_in addr_left_peer; 
 struct sockaddr_in addr_right_peer;  
 struct sockaddr_in sa_server_peer;
 
-#ifdef _DEBUG
-
-ssize_t (*_recv) (int, void*, size_t, int)       = recv_mock;
-ssize_t (*_send) (int, const void*, size_t, int) = send_mock;
-ssize_t (*_recvfrom) (int, void*, size_t, sockaddr*, socklen_t*) = recvfrom_mock;
-ssize_t (*_sendto) (int, const void*, size_t, sockaddr*, socklen_t*) = sendto_mock;
-
-#else
-
 ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
-
-#endif
+int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
 
 //---------------------------------------------------------------------//
 //-----------END OF VARIABLES, FUNTIONS DEFINITIONS--------------------//
@@ -120,7 +110,7 @@ void* thread_func_scheduler (void* argv) {
 			panic = true;
 
 		} else {
-			cerr << "Unknown message received." << endl;
+			fprintf (stderr, "Unknown message received\n");
 			panic = true;
 		}
 	}
@@ -160,7 +150,7 @@ void* thread_func_neighbor (void* argv) {
 
 			//When it ask for information
 		} else {
-			cerr << "Unknown message received from peer server" << endl;
+			fprintf (stderr, "Unknown message received from peer server\n");
 			panic = true;
 		}
 	}
@@ -240,7 +230,7 @@ void setup_server_peer (int port) {
 
 	sa_server_peer.sin_family      = AF_INET;
 	sa_server_peer.sin_port        = htons (port);
-	sa_server_peer.sin_addr.s_addr = inet_addr (INADDR_ANY);
+	sa_server_peer.sin_addr.s_addr = htonl (INADDR_ANY);
 	bzero (&(sa_server_peer.sin_zero), 8);
 }
 
@@ -282,7 +272,7 @@ void setup_client_scheduler (const char* host_str) {
 	server_addr.sin_addr.s_addr = inet_addr (host_str);
 	bzero (&(server_addr.sin_zero), 8);
 
-	EXIT_IF (connect (sock, (sockaddr*)&server_addr, s), "CONNECT");
+	EXIT_IF (_connect (sock, (sockaddr*)&server_addr, s), "CONNECT");
 }
 
 /*
@@ -302,4 +292,15 @@ void parse_args (int argc, const char** argv) {
 		}
 		c = getopt (argc, const_cast<char**> (argv), "h:d:p:r:l:");
 	} while (c != -1);
+
+	// Check if everything was set
+	if (!host_str || !peer_right || !peer_left || !data_file || !port)
+		error (EXIT_FAILURE, errno, "PARSER: Arguments needs to be setted");
+}
+
+void close_all () {
+	close (sock);
+	close (sock_left);
+	close (sock_right);
+	close (sock_server);
 }

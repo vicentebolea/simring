@@ -54,13 +54,14 @@ extern pthread_t thread_neighbor;
 extern pthread_t thread_scheduler;
 
 #ifdef _DEBUG
-/* Mock functions*/
 ssize_t recv_mock (int, void*, size_t, int);
 ssize_t send_mock (int, const void*, size_t, int);
+int connect_mock (int, const struct sockaddr*, socklen_t);
 #endif
 
 extern ssize_t (*_recv) (int, void*, size_t, int);
 extern ssize_t (*_send) (int, const void*, size_t, int);
+extern int (*_connect) (int, const struct sockaddr*, socklen_t);
 
 void* thread_func_scheduler (void*) WEAK;
 void* thread_func_neighbor  (void*) WEAK;
@@ -72,5 +73,6 @@ void setup_server_peer      (int) WEAK;
 void setup_client_peer      (const int, const char*, const char*) WEAK;
 void setup_client_scheduler (const char*) WEAK;
 void parse_args             (int, const char**) WEAK;
+void close_all              (void) WEAK;
 
 #endif
