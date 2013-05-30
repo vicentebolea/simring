@@ -190,8 +190,8 @@ void* thread_func_disk (void* argv) {
 		TotalExecTime += query.getExecTime();                           
 		TotalWaitTime += query.getWaitTime();                           
 
-		Query victim = queue_scheduler.pop();                                           
-    query_send_peer (victim);
+		query_send_peer (queue_scheduler.back ());
+    queue_scheduler.pop();                                           
 		//-------------End of the crtical section------------------------//
 
 		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);

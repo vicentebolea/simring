@@ -1,6 +1,6 @@
 INCLUDE := -I./../../lib/
 LIBDIR  := -L./../../lib/
-LIB     := -l uniDQP -l pthread
+LIB     := -l simring -l pthread
 
 all: clean compile
 	g++ -g -Wall -o node node.o main.o $(INCLUDE) $(LIBDIR) $(LIB) 
