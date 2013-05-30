@@ -44,6 +44,7 @@ struct sockaddr_in sa_server_peer;
 
 ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
+ssize_t (*_sendto) (int, const void*, size_t, int) = send;
 int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
 
 //---------------------------------------------------------------------//
@@ -189,7 +190,8 @@ void* thread_func_disk (void* argv) {
 		TotalExecTime += query.getExecTime();                           
 		TotalWaitTime += query.getWaitTime();                           
 
-		queue_scheduler.pop();                                           
+		Query victim = queue_scheduler.pop();                                           
+    query_send_peer (victim);
 		//-------------End of the crtical section------------------------//
 
 		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);

@@ -7,8 +7,8 @@ objects := $(patsubst %.cc, %.o, $(sources))
 	$(CXX) $(CXXFLAGS) -c $< -o $@ $(OPTIONS)
 
 all: $(objects) 
-	-rm libuniDQP.a
-	$(AR) -rv libuniDQP.a $(objects)
+	-rm libsimring.a
+	$(AR) -rv libsimring.a $(objects)
 	-rm $(objects)
 
 $(objects) : $(sources)

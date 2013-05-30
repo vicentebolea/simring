@@ -6,7 +6,7 @@
 #ifndef __NODE_HH_
 #define __NODE_HH_
 
-#include <uniDQP.h>
+#include <simring.hh>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -57,6 +57,7 @@ extern pthread_t thread_scheduler;
 ssize_t recv_mock (int, void*, size_t, int);
 ssize_t send_mock (int, const void*, size_t, int);
 int connect_mock (int, const struct sockaddr*, socklen_t);
+void parse_args (int, char**);
 #endif
 
 extern ssize_t (*_recv) (int, void*, size_t, int);

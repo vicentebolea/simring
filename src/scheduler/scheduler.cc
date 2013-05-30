@@ -194,8 +194,9 @@ int main (int argc, char** argv) {
 #ifdef HASH
   selected = hash (&toSend);
 
-#elif defined BDEMA
+#elif defined BDEMA && define ME
   double minDist = DBL_MAX;
+	double boundary [NSERVERS - 1];
 
   for (int i = 0; i < NSERVERS; i++) {
    if ((ema + i) == NULL) {
@@ -205,6 +206,8 @@ int main (int argc, char** argv) {
    } else if (ema[i]->getDistance(toSend) * queryCount[i] < minDist) {
     selected = i;
     minDist = ema[i]->getDistance(toSend) * queryCount[i];
+    if (i < NSERVERS - 1) boundary [i] = (ema [i+1].getEMA() ema [i].getEMA()) / 2;
+    else boundary [i] = MAX_VALUE;
    }
   }
 

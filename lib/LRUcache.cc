@@ -1,4 +1,4 @@
-#include <uniDQP.h>
+#include <simring.hh>
 
 LRUcache::LRUcache (int _size) {
  cache = new lru_map<uint64_t, diskPage> (_size);

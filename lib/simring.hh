@@ -72,22 +72,23 @@
 using namespace std;
 
 enum input {
- HIT           = 0x00, 
- MISS          = 0x01, 
- QUERIES       = 0x02, 
- TOTALMISS     = 0x03,
- EXECTIME      = 0x04, 
- WAITTIME      = 0x05, 
+	HIT           = 0x00, 
+	MISS          = 0x01, 
+	QUERIES       = 0x02, 
+	TOTALMISS     = 0x03,
+	EXECTIME      = 0x04, 
+	WAITTIME      = 0x05, 
 };
 
 long *toArray (char*);
-void toArray (char*,long*);
+void toArray (char*, long*);
 double toDouble (long*);
 double toDouble (long, long, long);
 uint64_t timediff (struct timeval*, struct timeval*);
 void send_msg (int, char*, int);
 void recv_msg (int, char*);
 int poisson (double);
+int hilbert (int n, int x, int y);
 
 /** @brief Class which represent an abstract packet which
  * will be send by sockets
@@ -110,7 +111,7 @@ class Query: public packet {
 		struct timeval scheduledDate;
 		struct timeval startDate;
 		struct timeval finishedDate;
-  uint64_t key;
+		uint64_t key;
 
 	public:
 		//constructor & destructor
@@ -125,7 +126,7 @@ class Query: public packet {
 		//getter
 		uint64_t getWaitTime();
 		uint64_t getExecTime();
-  uint64_t getKey();
+		uint64_t getKey();
 };
 
 class server {
@@ -133,10 +134,12 @@ class server {
 		double ema, alpha;
 
 	public:
-  server () : ema(.0), alpha(.0) {}
+		server () : ema(.0), alpha(.0) {}
+
 		server (packet&, double);
 		double getDistance (packet&);
 		void updateEMA (packet&);
+		double getEMA () const { return ema; }
 };
 
 /* Cache Data structure classes */
@@ -147,13 +150,13 @@ class diskPage {
 		char chunk [DPSIZE];
 
 		diskPage (const long& f, const long& ofst): fid(f), offset(ofst) {
-   key = f + ofst;
-  }
+			key = f + ofst;
+		}
 
 		diskPage (const diskPage& that) {
 			fid = that.fid;
 			offset = that.offset;
-   key = that.key;
+			key = that.key;
 			memcpy (chunk, that.chunk, DPSIZE);
 		}
 
@@ -164,13 +167,13 @@ class diskPage {
 
 class LRUcache {
 	protected:
-  lru_map<uint64_t, diskPage>* cache;
-  char path [256];
+		lru_map<uint64_t, diskPage>* cache;
+		char path [256];
 
 	public:
 		LRUcache (int);
 
-  void setDataFile (char*);
+		void setDataFile (char*);
 		void match (packet&, uint64_t*, uint64_t*);
 };
 
