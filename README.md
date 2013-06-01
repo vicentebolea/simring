@@ -1,4 +1,4 @@
-simulator_simple
-================
+SIMRING
+====
 
-Just some backup of the code
+Simulator with ring network
