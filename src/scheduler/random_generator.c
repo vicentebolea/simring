@@ -7,7 +7,7 @@
 
 char help [] =
  "|====================================================|\n"
- "|RANDOM NUMBER GENERATOR                             |\n"
+ "| RANDOM NUMBER GENERATOR                            |\n"
  "|====================================================|\n"
  "|  -h           help                                 |\n" 
  "|  -n           Number of numbers                    |\n"
@@ -15,6 +15,7 @@ char help [] =
  "|  -t ,to       Upper boundary                       |\n"
  "|  -l ,lambda   lambda parameter (exponential dist)  |\n"
  "|  -d ,dist     Distribution (exponential|uniform)   |\n"
+ "|                                                    |\n"
  "|====================================================|\n"
  "| AUTHOR                vicente.bolea@gmail.com      |\n"
  "| VERSION               0.5.0                        |\n"

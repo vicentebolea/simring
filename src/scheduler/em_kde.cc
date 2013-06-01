@@ -49,6 +49,5 @@ void update (int index) {
    bin_width -= interpolation * bin_width;           //Since the boundary is now smaller the binwidth should be smaller
    freq_sum = 0;
   }
-
  } 
 }

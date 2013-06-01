@@ -1,4 +1,4 @@
-INCLUDE := -I./../../lib/
+INCLUDE := -I./../../lib/ -I./
 LIBDIR  := -L./../../lib/
 LIB     := -l simring -l pthread
 

@@ -1,9 +1,10 @@
 #include <simring.hh>
 
 long*
-toArray (char *line)
+toArray (char* line)
 {
-	long* token = new long int (4);
+  static long token [4];
+
 	token[0] = atol (strtok (line, " "));
 	token[1] = atol (strtok (NULL, " "));
 	token[2] = atol (strtok (NULL, " "));
@@ -11,6 +12,19 @@ toArray (char *line)
 
 	return token;
 }
+
+//long*
+//toArray (char* line, size_t _size)
+//{
+//  static long token [_size];
+//
+//	token[0] = atol (strtok (line, " "));
+//
+//  for (int i = 1; i < _size; i++)
+//		token[i] = atol (strtok (NULL, " "));
+//
+//	return token;
+//}
 
 void
 toArray (char* line, long* token)
@@ -63,9 +77,40 @@ int
 poisson (double c)
 {	
 	int x = 0;
+	srand (time(NULL));
+
   for (double t = .0; t <= 1.0; x++) {
-    srand (time(NULL));
     t -= log ((double)(rand()%1000) / 1000.0) / c;
   }
 	return x;
+}
+
+//rotate/flip a quadrant appropriately
+void
+rot (int n, int *x, int *y, int rx, int ry) 
+{
+	if (ry == 0) {
+		if (rx == 1) {
+			*x = n-1 - *x;
+			*y = n-1 - *y;
+		}
+
+		//Swap x and y
+		int t  = *x;
+		*x = *y;
+		*y = t;
+	}
+}
+
+int
+xy2d (int n, int x, int y) 
+{
+	int rx, ry, s, d=0;
+	for (s=n/2; s>0; s/=2) {
+		rx = (x & s) > 0;
+		ry = (y & s) > 0;
+		d += s * s * ((3 * rx) ^ ry);
+		rot(s, &x, &y, rx, ry);
+	}
+	return d;
 }

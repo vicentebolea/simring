@@ -1,6 +1,7 @@
 #define _DEBUG
 
 #include <node.hh>
+#include <simring.hh>
 #include <stdio.h>
 #include <string.h>
 

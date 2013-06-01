@@ -4,7 +4,9 @@
  *
  *
  */
-#include "node.hh"
+#include <node.hh>
+#include <simring.hh>
+#include <queue>
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
@@ -46,6 +48,8 @@ ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
 ssize_t (*_sendto) (int, const void*, size_t, int) = send;
 int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
+
+bool query_send_peer        (packet&);
 
 //---------------------------------------------------------------------//
 //-----------END OF VARIABLES, FUNTIONS DEFINITIONS--------------------//

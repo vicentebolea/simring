@@ -5,8 +5,8 @@
  * @author Vicente Adolfo Bolea Sanchez
  */
 
-#ifndef _UNIDQP_
-#define _UNIDQP_
+#ifndef _SIMRING_HH_
+#define _SIMRING_HH_
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
@@ -120,13 +120,13 @@ class Query: public packet {
 		Query (const Query&);
 
 		//setter
-		void setStartDate();
-		void setFinishedDate();
+		void setStartDate ();
+		void setFinishedDate ();
 
 		//getter
-		uint64_t getWaitTime();
-		uint64_t getExecTime();
-		uint64_t getKey();
+		uint64_t getWaitTime ();
+		uint64_t getExecTime ();
+		uint64_t getKey ();
 };
 
 class server {
@@ -158,6 +158,14 @@ class diskPage {
 			offset = that.offset;
 			key = that.key;
 			memcpy (chunk, that.chunk, DPSIZE);
+		}
+
+		diskPage& operator= (const diskPage& that) {
+			fid = that.fid;
+			offset = that.offset;
+			key = that.key;
+			memcpy (chunk, that.chunk, DPSIZE);
+      return *this;
 		}
 
 		bool operator== (const diskPage& that) {

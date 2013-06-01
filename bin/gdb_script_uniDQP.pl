@@ -1,6 +1,6 @@
 #!/usr/bin/gdb -x
 
-file scheduler_bdema
+#file scheduler_bdema
 
 define ARprint
 	set $i = 0
@@ -20,4 +20,15 @@ define llprint
 		set $currentte = $currentte->next
 		print *$currentte
 	end
+end
+
+define print_report 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
+  print "QUEUE size:" 
 end

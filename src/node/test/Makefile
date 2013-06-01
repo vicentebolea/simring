@@ -1,7 +1,7 @@
 INCLUDE := -I./../../../lib/
 INCLUDE += -I./../
 LIBDIR  := -L./../../../lib/
-LIB     := -l uniDQP -l pthread
+LIB     := -l simring -l pthread
 OBJECT  := common.cc
 OBJECT  += main.cc
 

@@ -4,7 +4,8 @@
  *
  *
  */
-#include "node.hh"
+#include <node.hh>
+#include <simring.hh>
 
 int main (int argc, const char** argv) {
  struct timeval start;
