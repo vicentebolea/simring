@@ -11,11 +11,13 @@ main:
 	g++ -c main.cc -g -Wall -std=gnu++98 $(INCLUDE)
 
 common:
-	g++ -c common.cc -g -Wall -std=gnu++98 $(INCLUDE)
+	g++ -c ../node.cc common.cc -g -Wall -std=gnu++98 $(INCLUDE)
 
 random:
 	g++ -c random_number.cc -g -Wall -std=gnu++98 $(INCLUDE)
-	g++ -g -Wall -o node_test_rn ../node.o common.o random_number.o main.o $(INCLUDE) $(LIBDIR) $(LIB) 
+	g++ -g -Wall -o node_test_rn                             \
+  common.o node.o random_number.o main.o                   \
+  $(INCLUDE) $(LIBDIR) $(LIB) 
 
 same:
 	g++ -c same_number.cc -g -Wall -std=gnu++98 $(INCLUDE)

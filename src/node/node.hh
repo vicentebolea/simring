@@ -59,6 +59,8 @@ extern int (*_connect)      (int, const struct sockaddr*, socklen_t);
 
 #ifdef _DEBUG
 ssize_t recv_mock           (int, void*, size_t, int);
+ssize_t sendto_mock         (int, const void*, size_t, int);
+ssize_t recvfrom_mock       (int, const void*, size_t, int);
 ssize_t send_mock           (int, const void*, size_t, int);
 int connect_mock            (int, const struct sockaddr*, socklen_t);
 void parse_args             (int, char**);
@@ -73,5 +75,6 @@ void setup_client_peer      (const int, const char*, const char*) WEAK;
 void setup_client_scheduler (const char*) WEAK;
 void parse_args             (int, const char**) WEAK;
 void close_all              (void) WEAK;
+void catch_signal           (int);
 
 #endif

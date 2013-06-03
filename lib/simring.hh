@@ -86,7 +86,7 @@ double toDouble (long*);
 double toDouble (long, long, long);
 uint64_t timediff (struct timeval*, struct timeval*);
 void send_msg (int, char*, int);
-void recv_msg (int, char*);
+void recv_msg (int, char*) __attribute__((weak));
 int poisson (double);
 int hilbert (int n, int x, int y);
 

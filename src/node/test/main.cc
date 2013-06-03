@@ -1,10 +1,16 @@
 #define _DEBUG
 #include "node.hh"
+#include <signal.h>
 
 int main (int argc, const char** argv) {
  _connect = connect_mock;               //! Mock function
  _recv = recv_mock;                     //! My mocking functions
  _send = send_mock;                     //! my mocking functions 
+
+ signal (SIGINT, catch_signal);
+ signal (SIGSEGV, catch_signal);
+ signal (SIGKILL, catch_signal);
+ signal (SIGQUIT, catch_signal);
 
  parse_args (argc, argv);
  setup_client_scheduler (host_str);

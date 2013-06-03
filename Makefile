@@ -13,16 +13,14 @@ OPTIONS += 	-DLOT=1024
 
 .PHONY: lib dist node docs
 
-all: lib node
-	$(CXX) src/scheduler.cc -o bin/scheduler_bdema $(CXXFLAGS) $(OPTIONS) -DBDEMA
-	$(CXX) src/scheduler.cc -o bin/scheduler_hash $(CXXFLAGS) $(OPTIONS) -DHASH 
+all: lib src
 
 lib:
 	@echo building a static library!!
 	$(MAKE) -C lib/ 
 
-node:
-	-$(CXX) src/node.cc -o bin/node -lpthread $(CXXFLAGS) $(OPTIONS)
+src:
+	$(MAKE) -C src/
 
 clean:
 	-rm lib/*.o bin/scheduler_{bdema,hash} bin/node lib/libuniDQP.a

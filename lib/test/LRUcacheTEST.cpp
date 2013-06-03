@@ -9,11 +9,12 @@ int main(){
 		char a2[] = "1.5000.100000";
 		packet p_a (a1);
 		LRUcache cache (150);
-		cache.match(&p_a);
+		cache.match (&p_a);
 		packet p_b (a2);
 		//count match
-		printf("###%i", cache.match(&p_b));
+		printf("###%i", cache.match (&p_b));
 	}
+
 /*	
 	//Test B
 	{

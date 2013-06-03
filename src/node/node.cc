@@ -174,11 +174,11 @@ void* thread_func_disk (void* argv) {
 	while (!panic) {
 
 		pthread_mutex_lock (&mutex_scheduler);      //Waiting for producer 1
-		while (queue_scheduler.empty()) 
+		while (queue_scheduler.empty ()) 
 			pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler);
 
 		pthread_mutex_lock (&mutex_neighbor);       //Waiting for producer 2
-		while (queue_neighbor.empty()) 
+		while (queue_neighbor.empty ()) 
 			pthread_cond_wait (&cond_neighbor_empty, &mutex_neighbor);
 
 		if (panic) break;
@@ -302,6 +302,12 @@ void parse_args (int argc, const char** argv) {
 	// Check if everything was set
 	if (!host_str || !peer_right || !peer_left || !data_file || !port)
 		error (EXIT_FAILURE, errno, "PARSER: Arguments needs to be setted");
+}
+
+void catch_signal (int arg) {
+ close_all();
+ fprintf (stderr, "Sockets closed for security\n");
+ exit (EXIT_SUCCESS);
 }
 
 void close_all () {

@@ -39,7 +39,7 @@ int main (int argc, const char** argv) {
  cout << "CacheHits: " << hitCount << " diskPages" << endl;
  cout << "TotalExecTime: " << TotalExecTime << " 10E-6 s" << endl;
  cout << "TotalWaitTime: " << TotalWaitTime << " 10E-6 s" << endl;
- cout << "TotalTime: " << timediff(&end, &start) << " 10E-6 s" << endl;
+ cout << "TotalTime: " << timediff (&end, &start) << " 10E-6 s" << endl;
 
  close (sock);
 

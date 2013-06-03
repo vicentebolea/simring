@@ -17,7 +17,7 @@ declare -a PIDS
 
 idx=0
 for i in ${SERVERS[@]}; do	
-  ssh $i $appserver&
+  ssh $i gdbserver localhost:1212 $appserver&
   pids[idx]=$!
 done
 
