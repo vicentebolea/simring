@@ -18,7 +18,7 @@ char help [] =
  "|                                                    |\n"
  "|====================================================|\n"
  "| AUTHOR                vicente.bolea@gmail.com      |\n"
- "| VERSION               0.5.0                        |\n"
+ "| VERSION               0.1.0                        |\n"
  "|====================================================|\n";
 
 inline int uniform (const int low, const int up) {

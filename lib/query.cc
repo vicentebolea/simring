@@ -2,7 +2,6 @@
 
 Query::Query (const packet& p): packet(p) {
   gettimeofday(&scheduledDate, NULL);
-  key = fid + offset + length;
 }
 
 Query::Query (const Query& that): packet(that) {

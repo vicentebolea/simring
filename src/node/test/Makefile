@@ -11,7 +11,7 @@ main:
 	g++ -c main.cc -g -Wall -std=gnu++98 $(INCLUDE)
 
 common:
-	g++ -c ../node.cc common.cc -g -Wall -std=gnu++98 $(INCLUDE)
+	g++ -c ../node.cc common.cc -g -Wall -std=gnu++98 $(INCLUDE) -D_DEBUG
 
 random:
 	g++ -c random_number.cc -g -Wall -std=gnu++98 $(INCLUDE)
@@ -24,4 +24,4 @@ same:
 	g++ -g -Wall -o node_test_sn ../node.o common.o same_number.o main.o $(INCLUDE) $(LIBDIR) $(LIB) 
 
 clean:
-	-rm *.o node_test
+	-rm *.o node_test_*

@@ -1,5 +1,5 @@
 #include <signal.h>
-#include <uniDQP.h>
+#include <simring.hh>
 
 #define RULER()                                        \
    printf ("%-55s\n", (                                \
@@ -150,7 +150,7 @@ int main (int argc, char** argv) {
 
  struct sockaddr_in* client_addr;    
  uint32_t* queryCount;
- server** ema;
+ Node** backend;
 
  while ((c = getopt(argc, const_cast<char**> (argv), "q:n:p:")) != -1)
   switch (c) {
@@ -161,7 +161,7 @@ int main (int argc, char** argv) {
 
  //Dynamic memory
  client_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in) * nservers);
- ema = (server**) calloc (nservers, sizeof (server*));
+ backend = (server**) calloc (nservers, sizeof (server*));
  queryCount  = (uint32_t*) calloc (nservers, sizeof(uint32_t));
 
  signal (SIGINT, catchSignal);		//catching signals to close sockets and files
@@ -181,47 +181,32 @@ int main (int argc, char** argv) {
  //Main loop which use the given algorithm to send the queries
  for (char line[100]; fgets(line, 100, stdin) != NULL && cnt < nqueries; cnt++)
  {
-  packet toSend (line);
-  if (toSend.time != time && time != 0)
-   usleep (toSend.time - time);
+  packet toSend (prepare_input (line));
 
-  if (toSend.getEMA() < 0) {
-   cnt--;
-   continue;
-  }
   int selected = 0;
 
-#ifdef HASH
-  selected = hash (&toSend);
-
-#elif defined BDEMA && define ME
   double minDist = DBL_MAX;
 	double boundary [NSERVERS - 1];
 
   for (int i = 0; i < NSERVERS; i++) {
-   if ((ema + i) == NULL) {
-    ema[i] = (server*) new server (toSend, ALPHA);
+   if ((backend + i) == NULL) {
+    backend[i] = (server*) new Node (ALPHA);
+    backend[i].update_EMA (toSend.get_point ());
     selected = i;
 
-   } else if (ema[i]->getDistance(toSend) * queryCount[i] < minDist) {
+   } else if (backend[i]->getDistance(toSend) * queryCount[i] < minDist) {
     selected = i;
-    minDist = ema[i]->getDistance(toSend) * queryCount[i];
-    if (i < NSERVERS - 1) boundary [i] = (ema [i+1].getEMA() ema [i].getEMA()) / 2;
-    else boundary [i] = MAX_VALUE;
+    minDist = backend[i]->getDistance(toSend) * queryCount[i];
    }
   }
-
-  ema[selected]->updateEMA(toSend);
+  backend[selected]->set_low ((backend [selected]->get_EMA () - backend [selected - i]->get_EMA ()) / 2);
+  backend[selected]->set_upp ((backend [selected + i]->get_EMA () - backend [selected]->get_EMA ()) / 2);
+  backend[selected]->updateEMA (toSend);
   queryCount[selected]++;
-#elif defined KDE
-
-#endif
-
-  time = toSend.time;
 
   char query[] = "QUERY";
-  send_msg (connected[selected], query, strlen(query));
-  send (connected[selected], &toSend, sizeof(packet), 0);
+  send_msg (connected[selected], query, strlen (query));
+  send (connected[selected], &toSend, sizeof (packet), 0);
 
   if ((cnt+1)%10000 == 0) {
    (void)receive_all ();
@@ -232,8 +217,8 @@ int main (int argc, char** argv) {
 
  //Delete dynamic objects and say bye to back-end severs
  for (int i = 0; i < NSERVERS; i++) {
-  delete &ema[i];
-  ema[i] = NULL;
+  delete &backend[i];
+  backend[i] = NULL;
  }
 
  char QUIT[] = "QUIT";
@@ -250,7 +235,7 @@ int main (int argc, char** argv) {
  close (sock);
  free (client_addr);
  free (queryCount);
- free (ema);
+ free (backend);
 
  return EXIT_SUCCESS;
 }

@@ -1,50 +1,5 @@
 #include <simring.hh>
 
-long*
-toArray (char* line)
-{
-  static long token [4];
-
-	token[0] = atol (strtok (line, " "));
-	token[1] = atol (strtok (NULL, " "));
-	token[2] = atol (strtok (NULL, " "));
-	token[3] = atol (strtok (NULL, " "));
-
-	return token;
-}
-
-//long*
-//toArray (char* line, size_t _size)
-//{
-//  static long token [_size];
-//
-//	token[0] = atol (strtok (line, " "));
-//
-//  for (int i = 1; i < _size; i++)
-//		token[i] = atol (strtok (NULL, " "));
-//
-//	return token;
-//}
-
-void
-toArray (char* line, long* token)
-{
-	token[0] = atol (strtok (line, " "));
-	token[1] = atol (strtok (NULL, " "));
-	token[2] = atol (strtok (NULL, " "));
-	token[3] = atol (strtok (NULL, " "));
-}
-
-double
-toDouble (long *token) {
-	return token[0] + (((token[1] + token[2])/2) / 10000000000.0);
-}
-
-double
-toDouble (long token1, long token2, long token3) {
-	return token1 + (((token2 + token3)/2) / 10000000000.0);
-}
-
 uint64_t
 timediff (struct timeval *end_time, struct timeval *start_time)
 {
@@ -91,8 +46,8 @@ rot (int n, int *x, int *y, int rx, int ry)
 {
 	if (ry == 0) {
 		if (rx == 1) {
-			*x = n-1 - *x;
-			*y = n-1 - *y;
+			*x = n - 1 - *x;
+			*y = n - 1 - *y;
 		}
 
 		//Swap x and y
@@ -103,14 +58,21 @@ rot (int n, int *x, int *y, int rx, int ry)
 }
 
 int
-xy2d (int n, int x, int y) 
+hilbert (int n, int x, int y) 
 {
-	int rx, ry, s, d=0;
-	for (s=n/2; s>0; s/=2) {
+	int rx, ry, s, d = 0;
+	for (s = n / 2; s > 0; s /= 2) {
 		rx = (x & s) > 0;
 		ry = (y & s) > 0;
 		d += s * s * ((3 * rx) ^ ry);
-		rot(s, &x, &y, rx, ry);
+		rot (s, &x, &y, rx, ry);
 	}
 	return d;
+}
+
+int prepare_input (char* in) {
+ int a, b, ret;
+ sscanf (in, "%i %i", &a , &b );
+ ret = hilbert (2, a, b);
+ return ret;
 }

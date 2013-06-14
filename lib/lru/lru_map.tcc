@@ -5,11 +5,11 @@
 
 
 /**
-	* @brief  Push back in the linked list the given value and
-	*         store the key and the address of that value in
-	*         the hash table. In case that the pair is already
-	*         in the list it will be moved to the newest
-	*         position.
+ * @brief  Push back in the linked list the given value and
+ *         store the key and the address of that value in
+ *         the hash table. In case that the pair is already
+ *         in the list it will be moved to the newest
+ *         position.
  * @param[in]  k  value
  * @param[in]  v  paired with the previous key
  */
@@ -30,7 +30,7 @@ bool lru_map<key, value>::insert (const key& k, const value& v) {
  }
 
  if (this->size > max) pop();
-	return true;
+  return true;
 }
 
 /** ***************************************************//**
@@ -40,8 +40,8 @@ bool lru_map<key, value>::insert (const key& k, const value& v) {
 template <class key, class value>
 void lru_map<key, value>::pop () throw (out_of_range) {
 
-	if (!this->size)
-		return;
+ if (!this->size)
+  return;
  key k ((*ll.begin()).first);
  ht.remove (k);
 
@@ -50,12 +50,12 @@ void lru_map<key, value>::pop () throw (out_of_range) {
 }
 
 /** ***************************************************//**
-	* @brief     This method will search the value of the given
-	*            key. If it is found, It will remove the
-	*            element and push into the last position of the
-	*            list, e.g. the newest element.
+ * @brief     This method will search the value of the given
+ *            key. If it is found, It will remove the
+ *            element and push into the last position of the
+ *            list, e.g. the newest element.
  * 
-	* @param[in] k    key 
+ * @param[in] k    key 
  * @return    tmp  value paired with the given key
  */
 template <class key, class value>
@@ -66,6 +66,18 @@ lru_map<key, value>::lookup (const key& k) throw (out_of_range) {
  value& tmp ((*it).second);
  update (k, tmp);
 
+ return tmp;
+}
+
+/** ***************************************************//**
+ * TENTATIVE
+ */
+template <class key, class value>
+const value&
+lru_map<key, value>::peak (const key& k) throw (out_of_range) {
+
+ typename list<pair<key, value> >::iterator it = ht.lookup (k);
+ value& tmp ((*it).second);
  return tmp;
 }
 
@@ -98,11 +110,12 @@ lru_map<key, value>::update (const key& k, const value& v)
 {
  // :TRICKY:
  typename list<pair<key, value> >::iterator it = ht.lookup (k);
+ value tmp (v);
 
  ht.remove (k);         // Delete to the hash table
  ll.erase (it);         // Delete that node in the list
  this->size--;
- insert (k, v);         // Rearrange the list
+ insert (k, tmp);         // Rearrange the list
 }
 
 #endif

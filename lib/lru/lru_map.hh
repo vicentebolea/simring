@@ -64,6 +64,7 @@ class lru_map: public dictionary<key, value> {
   bool insert (const key&, const value&);
   void pop (void) throw (out_of_range);
   const value& lookup (const key&) throw (out_of_range);
+  const value& peak (const key&) throw (out_of_range);
   const value& oldest (void) throw (out_of_range);
   const value& newest (void) throw (out_of_range);
 

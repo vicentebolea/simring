@@ -69,6 +69,7 @@ void parse_args             (int, char**);
 void* thread_func_scheduler (void*) WEAK;
 void* thread_func_neighbor  (void*) WEAK;
 void* thread_func_disk      (void*) WEAK;
+void* thread_func_forward   (void*) WEAK;
 
 void setup_server_peer      (int) WEAK;
 void setup_client_peer      (const int, const char*, const char*) WEAK;

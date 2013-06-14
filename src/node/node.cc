@@ -10,7 +10,7 @@
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
-LRUcache cache (CACHESIZE); 
+SETcache cache (CACHESIZE); 
 
 int sock, sock_left, sock_right, port = 0, sock_server;  
 int lower_boundary;
@@ -186,16 +186,24 @@ void* thread_func_disk (void* argv) {
 		//--------------Start of the critical section--------------------//
 		Query query = queue_scheduler.front();                          
 
-		query.setStartDate();                                           
-		cache.match (static_cast<packet&> (query), &hitCount, &missCount); 
+		query.setStartDate ();                                           
+
+		//--------------Start measuring the time------------------//
+		if (cache.match (query.get_point (), query.low_b, query.upp_b))
+      hitCount++;
+    else
+      missCount++;
+    
+    //cache.update (query.low_b, query.upp_b); it should come before
+		//--------------Stop  measuring the time------------------//
+
 		query.setFinishedDate();                                        
 
 		queryProcessed++;                                                
 		TotalExecTime += query.getExecTime();                           
 		TotalWaitTime += query.getWaitTime();                           
 
-		query_send_peer (queue_scheduler.back ());
-    queue_scheduler.pop();                                           
+    queue_scheduler.pop ();                                           
 		//-------------End of the crtical section------------------------//
 
 		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);
@@ -211,15 +219,25 @@ void* thread_func_disk (void* argv) {
  * @param 
  * @param 
  */
-bool query_send_peer (packet& p) {
+void * thread_func_forward (void * arg) {
 	socklen_t s = sizeof (struct sockaddr);	
+  
+  while (!panic) {
+    while (!cache.queue_lower.empty ()) {
 
-	if (true) //! :TODO:
-		sendto (sock_left, &p, sizeof (packet), 0, (sockaddr*)&addr_left_peer, s);
-	else 
-		sendto (sock_right, &p, sizeof (packet), 0, (sockaddr*)&addr_right_peer, s);
+      diskPage& DP = cache.queue_lower.front ();
+		  sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_left_peer, s);
+      cache.queue_lower.pop ();
+    }
 
-	return true;
+    while (!cache.queue_upper.empty ()) {
+
+      diskPage& DP = cache.queue_upper.front ();
+		  sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_right_peer, s);
+      cache.queue_upper.pop ();
+    }
+  }
+	pthread_exit (EXIT_SUCCESS);
 }
 
 //---------------------------------------------------------------------//

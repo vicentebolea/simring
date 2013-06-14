@@ -67,51 +67,38 @@
 #include <iostream>
 #include <fstream>
 #include <set>
+#include <queue>
 #include "lru/lru_map.hh"
 
 using namespace std;
 
-enum input {
-	HIT           = 0x00, 
-	MISS          = 0x01, 
-	QUERIES       = 0x02, 
-	TOTALMISS     = 0x03,
-	EXECTIME      = 0x04, 
-	WAITTIME      = 0x05, 
-};
-
-long *toArray (char*);
-void toArray (char*, long*);
-double toDouble (long*);
-double toDouble (long, long, long);
-uint64_t timediff (struct timeval*, struct timeval*);
-void send_msg (int, char*, int);
-void recv_msg (int, char*) __attribute__((weak));
-int poisson (double);
-int hilbert (int n, int x, int y);
+uint64_t timediff      (struct timeval*, struct timeval*);
+void     send_msg      (int, char*, int);
+void     recv_msg      (int, char*) __attribute__((weak));
+int      poisson       (double);
+int      hilbert       (int n, int x, int y);
+int      prepare_input (char* in);
 
 /** @brief Class which represent an abstract packet which
  * will be send by sockets
  */
 class packet {
 	public:
-		long fid, offset, length, last, time;
+    int point, low_b, upp_b, time_stamp;
 
-		packet ();
-		packet (char* line);
+		packet () : point (0) {}
+		packet (int);
 		packet (const packet&);
 		packet& operator= (const packet&);
-		int getDistance (const packet&);
-		double getDistance (double);
-		double getEMA ();
+
+		int get_point ();
 };
 
 class Query: public packet {
-	private:
+	protected:
 		struct timeval scheduledDate;
 		struct timeval startDate;
 		struct timeval finishedDate;
-		uint64_t key;
 
 	public:
 		//constructor & destructor
@@ -126,63 +113,93 @@ class Query: public packet {
 		//getter
 		uint64_t getWaitTime ();
 		uint64_t getExecTime ();
-		uint64_t getKey ();
 };
 
-class server {
-	private:
-		double ema, alpha;
+class Node { 
+ protected:
+	double EMA, low_b, upp_b, alpha;
 
-	public:
-		server () : ema(.0), alpha(.0) {}
+ public:
+  Node (double a) : EMA (.0), low_b (.0), upp_b (.0) , alpha (a) {} 
+  void set_low (double l) { low_b = l; }
+  void set_upp (double u) { upp_b = u; } 
+  double get_low () { return low_b; }
+  double get_upp () { return upp_b; } 
 
-		server (packet&, double);
-		double getDistance (packet&);
-		void updateEMA (packet&);
-		double getEMA () const { return ema; }
+	double get_distance (packet& p) { 
+   return fabs (EMA - p.get_point ());
+  }
+
+  void update_EMA (double point)  { EMA += alpha * (point - EMA); } 
+  double get_EMA () const { return EMA; }
 };
 
-/* Cache Data structure classes */
+//-----------------------------------------------------------------//
+//---------------CACHE CLASSES INTERFACE---------------------------//
+//-----------------------------------------------------------------//
 
 class diskPage {
 	public:
-		uint64_t fid, offset, key;
+		uint64_t index;
 		char chunk [DPSIZE];
 
-		diskPage (const long& f, const long& ofst): fid(f), offset(ofst) {
-			key = f + ofst;
-		}
+		diskPage (const uint64_t i) : index (i) {}
 
 		diskPage (const diskPage& that) {
-			fid = that.fid;
-			offset = that.offset;
-			key = that.key;
+			index = that.index;
 			memcpy (chunk, that.chunk, DPSIZE);
 		}
 
 		diskPage& operator= (const diskPage& that) {
-			fid = that.fid;
-			offset = that.offset;
-			key = that.key;
+			index = that.index;
 			memcpy (chunk, that.chunk, DPSIZE);
       return *this;
 		}
 
 		bool operator== (const diskPage& that) {
-			return fid == that.fid && offset == that.offset ? true: false;
+			return index == that.index ? true: false;
 		}
+
+    static bool less_than (const diskPage& a, const diskPage& b) {
+     return (a.index < b.index);
+    }
+};
+
+class SETcache {
+	protected:
+		set<diskPage, bool (*) (const diskPage&, const diskPage&)>* cache;
+		char path [256];
+    int _max;
+    uint64_t count;
+
+	public:
+    SETcache (int, char * p = NULL);
+
+		void setDataFile (char*);
+		bool match (uint64_t, double, double);
+		void update (double, double);
+
+		queue<diskPage> queue_lower;
+		queue<diskPage> queue_upper;
 };
 
 class LRUcache {
 	protected:
 		lru_map<uint64_t, diskPage>* cache;
+		set<uint64_t> bst;
 		char path [256];
+
+		void insert (uint64_t);
 
 	public:
 		LRUcache (int);
 
 		void setDataFile (char*);
-		void match (packet&, uint64_t*, uint64_t*);
+		void match (uint64_t , uint64_t*, uint64_t*);
+		void update (double, double);
+
+		queue<diskPage> queue_lower;
+		queue<diskPage> queue_upper;
 };
 
 #endif

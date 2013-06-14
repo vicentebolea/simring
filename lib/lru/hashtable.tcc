@@ -8,7 +8,7 @@
  * @pre _size > 0
  */
 template <class key, class value>
-hashTable<key, value>::hashTable (size_t _size = 128) {
+hashTable<key, value>::hashTable (size_t _size = 512) {
  assert (_size != 0);
  buckets_no = _size;
  buckets = new list<entry> [buckets_no];
