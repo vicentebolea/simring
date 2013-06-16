@@ -181,6 +181,8 @@ class SETcache {
 
 		queue<diskPage> queue_lower;
 		queue<diskPage> queue_upper;
+
+    friend ostream& operator<< (ostream&, SETcache&);
 };
 
 class LRUcache {

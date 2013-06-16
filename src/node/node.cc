@@ -71,12 +71,13 @@ void* thread_func_scheduler (void* argv) {
 		//When a new query arrive
 		if (strcmp (recv_data, "QUERY") == OK) {
 			Query aux;
-			pthread_mutex_lock (&mutex_scheduler);
 
 			int ret = _recv (sock, static_cast<packet*>(&aux), 
 					sizeof(packet), MSG_WAITALL);
 			if (ret != sizeof (packet))
 				perror ("Receiving data");
+
+			pthread_mutex_lock (&mutex_scheduler);
 
 			queue_scheduler.push (aux);
 			queryRecieves++;
@@ -110,9 +111,10 @@ void* thread_func_scheduler (void* argv) {
 
 			//In case that we need to finish the execution 
 		} else if (strcmp (recv_data, "QUIT") == OK) {
-			die_thread = true;
-			pthread_mutex_unlock (&mutex_scheduler);
+
 			panic = true;
+		  sleep (1);
+			pthread_cond_signal (&cond_scheduler_empty);
 
 		} else {
 			fprintf (stderr, "Unknown message received\n");
@@ -134,18 +136,24 @@ void* thread_func_neighbor (void* argv) {
 
 	while (!panic) {
 		char recv_data [LOT];
-		recv_msg (sock, recv_data);
+		recv_msg2 (sock, recv_data);
 
 		//When a new query arrive
 		if (strcmp (recv_data, "QUERY") == OK) {
 			Query aux;
-			pthread_mutex_lock (&mutex_neighbor);
 
 			int ret = recvfrom (sock_server, static_cast<packet*>(&aux),
-					sizeof (packet), MSG_WAITALL,
+					sizeof (packet), MSG_DONTWAIT,
 					(sockaddr*)&sa_server_peer, &s);
 
-			if (ret != sizeof (packet)) perror ("Receiving data");
+			if (ret != sizeof (packet) && ret != -1) perror ("Receiving data");
+      if (ret == -1) {
+        pthread_cond_signal (&cond_neighbor_empty);
+			  pthread_mutex_unlock (&mutex_neighbor);
+        continue;
+      }
+
+			pthread_mutex_lock (&mutex_neighbor);
 
 			queue_neighbor.push (aux);
 			queryRecieves++;
@@ -155,10 +163,11 @@ void* thread_func_neighbor (void* argv) {
 
 			//When it ask for information
 		} else {
-			fprintf (stderr, "Unknown message received from peer server\n");
+			fprintf (stderr, "Unknown message received from peer server: %s\n", recv_data);
 			panic = true;
 		}
 	}
+	pthread_cond_signal (&cond_neighbor_empty);
 	pthread_exit (EXIT_SUCCESS);
 }
 
@@ -173,43 +182,59 @@ void* thread_func_neighbor (void* argv) {
 void* thread_func_disk (void* argv) {
 	while (!panic) {
 
-		pthread_mutex_lock (&mutex_scheduler);      //Waiting for producer 1
-		while (queue_scheduler.empty ()) 
-			pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler);
-
-		pthread_mutex_lock (&mutex_neighbor);       //Waiting for producer 2
-		while (queue_neighbor.empty ()) 
-			pthread_cond_wait (&cond_neighbor_empty, &mutex_neighbor);
+		pthread_mutex_lock (&mutex_scheduler);  
+		while (queue_scheduler.empty ()) {  
+			pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler); 
+		  if (panic) break;
+    }
 
 		if (panic) break;
 
 		//--------------Start of the critical section--------------------//
-		Query query = queue_scheduler.front();                          
+    if (!queue_scheduler.empty()) {
 
-		query.setStartDate ();                                           
+		  Query query = queue_scheduler.front();                          
+      queue_scheduler.pop ();                                           
+		  //-------------End of the crtical section------------------------//
+   
+		  //--------------Start measuring the time------------------//
+		  query.setStartDate ();                                           
+		  bool ret = cache.match (query.get_point (), query.low_b, query.upp_b);
+		  query.setFinishedDate();                                        
+		  //--------------Stop  measuring the time------------------//
 
-		//--------------Start measuring the time------------------//
-		if (cache.match (query.get_point (), query.low_b, query.upp_b))
-      hitCount++;
-    else
-      missCount++;
-    
-    //cache.update (query.low_b, query.upp_b); it should come before
-		//--------------Stop  measuring the time------------------//
+		  if (ret == true) hitCount++; else missCount++;
+		  queryProcessed++;                                                
 
-		query.setFinishedDate();                                        
-
-		queryProcessed++;                                                
-		TotalExecTime += query.getExecTime();                           
-		TotalWaitTime += query.getWaitTime();                           
-
-    queue_scheduler.pop ();                                           
-		//-------------End of the crtical section------------------------//
-
+		  TotalExecTime += query.getExecTime();                           
+		  TotalWaitTime += query.getWaitTime();                           
+    }
+		pthread_mutex_unlock (&mutex_scheduler);
 		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);
 
-		pthread_mutex_unlock (&mutex_neighbor);
-		pthread_mutex_unlock (&mutex_scheduler);
+		if (panic) break;
+
+		pthread_mutex_lock (&mutex_neighbor);
+		//--------------Start of the critical section--------------------//
+    if (!queue_neighbor.empty()) {
+      Query query = queue_neighbor.front();
+      queue_scheduler.pop ();                                           
+  	  //-------------End of the crtical section------------------------//
+
+  	  //--------------Start measuring the time------------------//
+  	  query.setStartDate ();                                           
+  	  bool ret = cache.match (query.get_point (), query.low_b, query.upp_b);
+  	  query.setFinishedDate();                                        
+  	  //--------------Stop  measuring the time------------------//
+
+  	  if (ret == true) hitCount++; else missCount++;
+
+  	  queryProcessed++;                                                
+  	  TotalExecTime += query.getExecTime();                           
+  	  TotalWaitTime += query.getWaitTime();                           
+    }
+  	pthread_mutex_unlock (&mutex_neighbor);
+
 	}
 	pthread_exit (EXIT_SUCCESS);
 }

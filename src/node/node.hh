@@ -63,7 +63,7 @@ ssize_t sendto_mock         (int, const void*, size_t, int);
 ssize_t recvfrom_mock       (int, const void*, size_t, int);
 ssize_t send_mock           (int, const void*, size_t, int);
 int connect_mock            (int, const struct sockaddr*, socklen_t);
-void parse_args             (int, char**);
+void parse_args             (int, const char**);
 #endif
 
 void* thread_func_scheduler (void*) WEAK;
@@ -77,5 +77,6 @@ void setup_client_scheduler (const char*) WEAK;
 void parse_args             (int, const char**) WEAK;
 void close_all              (void) WEAK;
 void catch_signal           (int);
+void recv_msg2              (int fd, char* in);
 
 #endif
