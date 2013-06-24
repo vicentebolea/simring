@@ -14,16 +14,18 @@ OPTIONS += 	-DLOT=1024
 .PHONY: lib dist node docs
 
 all: lib src
+	$(MAKE) -C src/
 
 lib:
 	@echo building a static library!!
-	$(MAKE) -C lib/ 
+	$(MAKE) -C lib/ -j16
 
 src:
 	$(MAKE) -C src/
 
 clean:
-	-rm lib/*.o bin/scheduler_{bdema,hash} bin/node lib/libuniDQP.a
+	$(MAKE) -C lib/ clean
+	$(MAKE) -C src/ clean
 
 dist: clean
 	tar -cvzf simulator_simple_`date +"%d-%m-%y"`.tar.gz ./*

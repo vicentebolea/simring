@@ -17,8 +17,8 @@ int main (int argc, const char** argv) {
  setup_client_peer (port, peer_right, peer_left);
  gettimeofday (&start, NULL);
 
- pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
- pthread_mutex_lock (&mutex_neighbor);  /* Initialize the lock to 0 */
+// pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
+ //pthread_mutex_lock (&mutex_neighbor);  /* Initialize the lock to 0 */
 
  pthread_create (&thread_disk,      NULL, thread_func_disk,      NULL);
  pthread_create (&thread_neighbor,  NULL, thread_func_neighbor,  NULL);

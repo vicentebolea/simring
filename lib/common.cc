@@ -42,7 +42,7 @@ poisson (double c)
 
 //rotate/flip a quadrant appropriately
 void
-rot (int n, int *x, int *y, int rx, int ry) 
+rot (int64_t n, int64_t  *x, int64_t *y, int64_t  rx, int64_t ry) 
 {
 	if (ry == 0) {
 		if (rx == 1) {
@@ -51,16 +51,16 @@ rot (int n, int *x, int *y, int rx, int ry)
 		}
 
 		//Swap x and y
-		int t  = *x;
+		int64_t t  = *x;
 		*x = *y;
 		*y = t;
 	}
 }
 
-int
-hilbert (int n, int x, int y) 
+int64_t
+hilbert (int64_t n, int64_t x, int64_t y) 
 {
-	int rx, ry, s, d = 0;
+	int64_t rx, ry, s, d = 0;
 	for (s = n / 2; s > 0; s /= 2) {
 		rx = (x & s) > 0;
 		ry = (y & s) > 0;
@@ -70,9 +70,9 @@ hilbert (int n, int x, int y)
 	return d;
 }
 
-int prepare_input (char* in) {
- int a, b, ret;
- sscanf (in, "%i %i", &a , &b );
- ret = hilbert (2, a, b);
+uint64_t prepare_input (char* in) {
+ int64_t a, b, ret;
+ sscanf (in, "%" SCNi64 " %" SCNi64 , &a , &b );
+ ret = hilbert (1024, a, b);
  return ret;
 }

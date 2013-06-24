@@ -1,6 +1,8 @@
 #include <simring.hh>
 
-packet::packet (int p) : point (p) {}	
+packet::packet (uint64_t p) : point (p) {}	
+packet::packet (uint64_t p, uint64_t l, uint64_t u) 
+ : point (p), low_b (l), upp_b (u) {}	
 packet::packet (const packet& that) : point (that.point) {}
 
 packet& packet::operator= (const packet& that) {
@@ -11,4 +13,4 @@ packet& packet::operator= (const packet& that) {
 	return *this;
 }
 
-int packet::get_point (void) { return this->point; }
+uint64_t packet::get_point (void) { return this->point; }

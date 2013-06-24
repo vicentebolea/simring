@@ -73,7 +73,7 @@ void* thread_func_scheduler (void* argv) {
 			Query aux;
 
 			int ret = _recv (sock, static_cast<packet*>(&aux), 
-					sizeof(packet), MSG_WAITALL);
+					sizeof(packet), 0);
 			if (ret != sizeof (packet))
 				perror ("Receiving data");
 
@@ -82,12 +82,13 @@ void* thread_func_scheduler (void* argv) {
 			queue_scheduler.push (aux);
 			queryRecieves++;
 
-			pthread_cond_signal (&cond_scheduler_empty);
+			//pthread_cond_signal (&cond_scheduler_empty);
 			pthread_mutex_unlock (&mutex_scheduler);
 
 			//When it ask for information
 		} else if (strcmp (recv_data, "INFO") == OK) {
 			char send_data [LOT] = "", tmp [256];
+      cout << "asking for info" << endl;
 
 			pthread_mutex_lock (&mutex_scheduler);
 
@@ -135,37 +136,28 @@ void* thread_func_neighbor (void* argv) {
 	socklen_t s = sizeof (sockaddr);
 
 	while (!panic) {
-		char recv_data [LOT];
-		recv_msg2 (sock, recv_data);
+	  //When a new query arrive
+		Query aux;
 
-		//When a new query arrive
-		if (strcmp (recv_data, "QUERY") == OK) {
-			Query aux;
+		int ret = recvfrom (sock_server, static_cast<packet*>(&aux),
+				sizeof (packet), MSG_DONTWAIT,
+				(sockaddr*)&sa_server_peer, &s);
 
-			int ret = recvfrom (sock_server, static_cast<packet*>(&aux),
-					sizeof (packet), MSG_DONTWAIT,
-					(sockaddr*)&sa_server_peer, &s);
-
-			if (ret != sizeof (packet) && ret != -1) perror ("Receiving data");
-      if (ret == -1) {
-        pthread_cond_signal (&cond_neighbor_empty);
-			  pthread_mutex_unlock (&mutex_neighbor);
-        continue;
-      }
-
-			pthread_mutex_lock (&mutex_neighbor);
-
-			queue_neighbor.push (aux);
-			queryRecieves++;
-
-			pthread_cond_signal (&cond_neighbor_empty);
+		if (ret != sizeof (packet) && ret != -1) perror ("Receiving data");
+  	if (ret == -1) {
+  	  pthread_cond_signal (&cond_neighbor_empty);
 			pthread_mutex_unlock (&mutex_neighbor);
+  	  continue;
+  	}
 
-			//When it ask for information
-		} else {
-			fprintf (stderr, "Unknown message received from peer server: %s\n", recv_data);
-			panic = true;
-		}
+		pthread_mutex_lock (&mutex_neighbor);
+
+		queue_neighbor.push (aux);
+		queryRecieves++;
+
+		pthread_cond_signal (&cond_neighbor_empty);
+		pthread_mutex_unlock (&mutex_neighbor);
+
 	}
 	pthread_cond_signal (&cond_neighbor_empty);
 	pthread_exit (EXIT_SUCCESS);
@@ -183,10 +175,10 @@ void* thread_func_disk (void* argv) {
 	while (!panic) {
 
 		pthread_mutex_lock (&mutex_scheduler);  
-		while (queue_scheduler.empty ()) {  
-			pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler); 
-		  if (panic) break;
-    }
+//		while (queue_scheduler.empty ()) {  
+			//pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler); 
+		  //if (panic) break;
+    //}
 
 		if (panic) break;
 
@@ -195,11 +187,10 @@ void* thread_func_disk (void* argv) {
 
 		  Query query = queue_scheduler.front();                          
       queue_scheduler.pop ();                                           
-		  //-------------End of the crtical section------------------------//
    
 		  //--------------Start measuring the time------------------//
 		  query.setStartDate ();                                           
-		  bool ret = cache.match (query.get_point (), query.low_b, query.upp_b);
+		  bool ret = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
 		  query.setFinishedDate();                                        
 		  //--------------Stop  measuring the time------------------//
 
@@ -209,11 +200,13 @@ void* thread_func_disk (void* argv) {
 		  TotalExecTime += query.getExecTime();                           
 		  TotalWaitTime += query.getWaitTime();                           
     }
+		//-------------End of the crtical section------------------------//
+
 		pthread_mutex_unlock (&mutex_scheduler);
-		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);
+//		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);
 
 		if (panic) break;
-
+/*
 		pthread_mutex_lock (&mutex_neighbor);
 		//--------------Start of the critical section--------------------//
     if (!queue_neighbor.empty()) {
@@ -234,7 +227,7 @@ void* thread_func_disk (void* argv) {
   	  TotalWaitTime += query.getWaitTime();                           
     }
   	pthread_mutex_unlock (&mutex_neighbor);
-
+*/
 	}
 	pthread_exit (EXIT_SUCCESS);
 }
@@ -314,14 +307,14 @@ void setup_client_scheduler (const char* host_str) {
 	struct sockaddr_in server_addr;  
 	socklen_t s = sizeof (sockaddr);
 
-	EXIT_IF (sock = socket (AF_INET, SOCK_STREAM, 0), "SOCKET");
+	EXIT_IF (sock = socket (AF_INET, SOCK_STREAM, 0), "SOCKET SCHEDULER");
 
 	server_addr.sin_family      = AF_INET;
 	server_addr.sin_port        = htons (port);
 	server_addr.sin_addr.s_addr = inet_addr (host_str);
 	bzero (&(server_addr.sin_zero), 8);
 
-	EXIT_IF (_connect (sock, (sockaddr*)&server_addr, s), "CONNECT");
+	EXIT_IF (_connect (sock, (sockaddr*)&server_addr, s), "CONNECT SCHEDULER");
 }
 
 /*

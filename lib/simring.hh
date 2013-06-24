@@ -68,30 +68,34 @@
 #include <fstream>
 #include <set>
 #include <queue>
+#include <boost/lambda/lambda.hpp>
 #include "lru/lru_map.hh"
 
 using namespace std;
+using namespace boost::lambda;
 
 uint64_t timediff      (struct timeval*, struct timeval*);
 void     send_msg      (int, char*, int);
 void     recv_msg      (int, char*) __attribute__((weak));
 int      poisson       (double);
-int      hilbert       (int n, int x, int y);
-int      prepare_input (char* in);
+int64_t  hilbert       (int64_t n, int64_t x, int64_t y);
+uint64_t prepare_input (char* in);
 
 /** @brief Class which represent an abstract packet which
  * will be send by sockets
  */
 class packet {
 	public:
-    int point, low_b, upp_b, time_stamp;
+    uint64_t point; 
+    double low_b, upp_b, EMA;
 
 		packet () : point (0) {}
-		packet (int);
+		packet (uint64_t);
+		packet (uint64_t, uint64_t, uint64_t);
 		packet (const packet&);
 		packet& operator= (const packet&);
 
-		int get_point ();
+		uint64_t get_point ();
 };
 
 class Query: public packet {
@@ -121,6 +125,7 @@ class Node {
 
  public:
   Node (double a) : EMA (.0), low_b (.0), upp_b (.0) , alpha (a) {} 
+  Node (double a, double e) : EMA (e), low_b (.0), upp_b (.0) , alpha (a) {} 
   void set_low (double l) { low_b = l; }
   void set_upp (double u) { upp_b = u; } 
   double get_low () { return low_b; }
@@ -128,6 +133,10 @@ class Node {
 
 	double get_distance (packet& p) { 
    return fabs (EMA - p.get_point ());
+  }
+ 
+  double get_distance (uint64_t p) {
+   return fabs (EMA - p); 
   }
 
   void update_EMA (double point)  { EMA += alpha * (point - EMA); } 
@@ -176,7 +185,7 @@ class SETcache {
     SETcache (int, char * p = NULL);
 
 		void setDataFile (char*);
-		bool match (uint64_t, double, double);
+		bool match (uint64_t, double, double, double);
 		void update (double, double);
 
 		queue<diskPage> queue_lower;

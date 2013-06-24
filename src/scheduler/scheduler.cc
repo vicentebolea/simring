@@ -2,41 +2,20 @@
 #include <simring.hh>
 
 #define RULER()                                        \
-   printf ("%-55s\n", (                                \
+   printf ("%-54s\n", (                                \
    "---------------------------------------------"     \
    "---------------------------------------------"     \
    "---------------------------------------------")) 
     
 
-
 using namespace std;
 
-int sock, port;
+int sock, port = 0;
 int16_t connected [NSERVERS];
 uint64_t TotalCacheHit = 0, TotalCacheMiss = 0,  numQuery = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0; 
 uint64_t AveExecTime = 0, AveWaitTime = 0; 
 uint64_t MaxExecTime = 0, MaxWaitTime = 0; 
-
-inline int hash (packet* p) {
-  int a = p->fid;
-  a = (a+0x7ed55d16) + (a<<12);
-  a = (a^0xc761c23c) ^ (a>>19);
-  a = (a+0x165667b1) + (a<<5);
-  a = (a+0xd3a2646c) ^ (a<<9);
-  a = (a+0xfd7046c5) + (a<<3);
-  a = (a^0xb55a4f09) ^ (a>>16);
-
-  int b = p->offset;
-  b = (b+0x7ed55d16) + (b<<12);
-  b = (b^0xc761c23c) ^ (b>>19);
-  b = (b+0x165667b1) + (b<<5);
-  b = (b+0xd3a2646c) ^ (b<<9);
-  b = (b+0xfd7046c5) + (b<<3);
-  b = (b^0xb55a4f09) ^ (b>>16);
-
-  return abs ((a+b)%NSERVERS);
-}
 
 void receive_all (void) {
 	char recv_data[LOT];
@@ -108,8 +87,8 @@ void print_out (void) {
                (TotalCacheHit + TotalCacheMiss) ) );
 }
 
-void wakeUpServer (void)
-{
+void wakeUpServer (void) {
+
  int one = 1;
  struct sockaddr_in server_addr;
  if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -126,7 +105,7 @@ void wakeUpServer (void)
  bzero (&(server_addr.sin_zero),8);
 
  if (bind (sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
-  perror ("Unable to bind");
+  perror ("SCHEDULER: Unable to bind");
   exit (EXIT_FAILURE);
  }
  if (listen (sock, NSERVERS + 1) == -1) {
@@ -143,26 +122,32 @@ void catchSignal (int Signal) {
 }
 
 int main (int argc, char** argv) {
- int c, nservers;
- uint32_t nqueries = 0;
- uint32_t cnt = 0, time = 0;
+ int c, nservers = 0;
+ uint32_t nqueries = 0, step = 10000;
+ uint32_t cnt = 0;
  struct timeval start, end;
 
  struct sockaddr_in* client_addr;    
  uint32_t* queryCount;
  Node** backend;
 
- while ((c = getopt(argc, const_cast<char**> (argv), "q:n:p:")) != -1)
+ while ((c = getopt(argc, const_cast<char**> (argv), "q:n:p:s:")) != -1)
   switch (c) {
    case 'q': nqueries = atoi (optarg); break;
    case 'n': nservers = atoi (optarg); break;
    case 'p': port = atoi (optarg);     break;
+   case 's': step = atoi (optarg);     break;
   }
+
+ if (!nqueries || !nservers || !port) {
+   fprintf (stderr, "PARSER: all the options needs to be setted\n");
+   exit (EXIT_FAILURE);
+ }
 
  //Dynamic memory
  client_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in) * nservers);
- backend = (server**) calloc (nservers, sizeof (server*));
- queryCount  = (uint32_t*) calloc (nservers, sizeof(uint32_t));
+ backend = new Node* [nservers];
+ queryCount  = new uint32_t [nservers];
 
  signal (SIGINT, catchSignal);		//catching signals to close sockets and files
  signal (SIGSEGV, catchSignal);
@@ -175,47 +160,69 @@ int main (int argc, char** argv) {
   connected[i] = accept (sock, (struct sockaddr *)&client_addr[i], &sin_size);
   printf ("I got a connection from %s\n", inet_ntoa(client_addr[i].sin_addr)); 
  } 
- gettimeofday(&start, NULL);
 
- (void)print_header ();
- //Main loop which use the given algorithm to send the queries
+ gettimeofday (&start, NULL);
+ print_header ();
+ 
+ //! Initiliaze the node equally
+ const uint64_t data_interval = 1000000;
+ { 
+ int j = 0;
+ for (uint64_t i = 0; i < data_interval; i += (data_interval/nservers)) {
+   backend [j++] = new Node (ALPHA, i + (data_interval/nservers)/2);
+   cout << "FIRST: i: " << i << " j: " << j << " b: " << backend[j-1]->get_EMA () << endl;
+ }
+ }  
+
+ //! Main loop which use the given algorithm to send the queries
  for (char line[100]; fgets(line, 100, stdin) != NULL && cnt < nqueries; cnt++)
  {
-  packet toSend (prepare_input (line));
-
   int selected = 0;
-
+  uint64_t point = prepare_input (line);
+  cout << "POINT: " << point << " ";
   double minDist = DBL_MAX;
-	double boundary [NSERVERS - 1];
 
-  for (int i = 0; i < NSERVERS; i++) {
-   if ((backend + i) == NULL) {
-    backend[i] = (server*) new Node (ALPHA);
-    backend[i].update_EMA (toSend.get_point ());
+  for (int i = 0; i < nservers; i++) {
+   if (backend[i]->get_distance (point) < minDist) {
     selected = i;
-
-   } else if (backend[i]->getDistance(toSend) * queryCount[i] < minDist) {
-    selected = i;
-    minDist = backend[i]->getDistance(toSend) * queryCount[i];
+    minDist = backend[i]->get_distance (point);
    }
   }
-  backend[selected]->set_low ((backend [selected]->get_EMA () - backend [selected - i]->get_EMA ()) / 2);
-  backend[selected]->set_upp ((backend [selected + i]->get_EMA () - backend [selected]->get_EMA ()) / 2);
-  backend[selected]->updateEMA (toSend);
-  queryCount[selected]++;
 
-  char query[] = "QUERY";
+  //! :TODO: Circular boundaries
+  if (selected == 0) {                     //! For now lets fix the first node low boundary in 0
+    backend[selected]->set_low (.0);
+
+  } else {
+    backend[selected]->set_low ((backend [selected]->get_EMA () - backend [(selected - 1)]->get_EMA ()) / 2.0);
+  } 
+
+  if (selected == nservers - 1 || backend[selected + 1] == NULL) {
+    backend[selected]->set_upp (DBL_MAX);  //! For now lets fix the last node upp boundary in the maximum num
+
+  } else {
+    backend[selected]->set_upp ((backend [selected + 1]->get_EMA () - backend [selected]->get_EMA ()) / 2.0);
+  }
+
+  backend[selected]->update_EMA (point);
+  //queryCount[selected]++;
+
+  cout << "NODE: " << selected;
+  cout << " EMA: " <<  backend[selected]->get_EMA ();
+  cout << " SENDING: " << point << " LOW: " << backend[selected]->get_low() << " UPP: " << backend[selected]->get_upp() << endl;
+  char query [] = "QUERY";
   send_msg (connected[selected], query, strlen (query));
+  packet toSend (point);
   send (connected[selected], &toSend, sizeof (packet), 0);
 
-  if ((cnt+1)%10000 == 0) {
-   (void)receive_all ();
-   (void)print_out ();
+  if ((cnt + 1) % step == 0) {
+   receive_all ();
+   print_out ();
   }
  }
  RULER ();
 
- //Delete dynamic objects and say bye to back-end severs
+ //! Delete dynamic objects and say bye to back-end severs
  for (int i = 0; i < NSERVERS; i++) {
   delete &backend[i];
   backend[i] = NULL;
@@ -226,16 +233,16 @@ int main (int argc, char** argv) {
   send_msg (connected[i], QUIT, strlen(QUIT));  
 
  gettimeofday (&end, NULL);
- printf ("schedulerTime:\t %20" PRIu64 "\t S-6\n", timediff(&end, &start));
+ printf ("schedulerTime:\t %20" PRIu64 "\t S-6\n", timediff (&end, &start));
 
- // close sockets
+ //! Close sockets
  for (int i = 0; i < NSERVERS; i++)
   close (connected[i]);
 
  close (sock);
  free (client_addr);
- free (queryCount);
- free (backend);
+ delete[] queryCount;
+ delete[] backend;
 
  return EXIT_SUCCESS;
 }

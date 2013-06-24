@@ -37,7 +37,7 @@ ostream& operator<< (ostream& out, SETcache& in) {
 /*
  *
  */
-bool SETcache::match (uint64_t idx, double low, double upp) {
+bool SETcache::match (uint64_t idx, double ema, double low, double upp) {
 	diskPage a (idx);
 	update (low, upp); //! O(logn)
 
@@ -68,7 +68,7 @@ bool SETcache::match (uint64_t idx, double low, double upp) {
 			uint64_t lowest  = (*first).index;
 			uint64_t highest = (*last).index;
 
-			if (((uint64_t)lowest - low) < ((uint64_t)upp - highest))
+			if (((uint64_t)ema - lowest) < ((uint64_t)highest - ema))
 				cache->erase (lowest);
 
 			else 
@@ -92,7 +92,7 @@ void SETcache::update (double low, double upp) {
   if (low_i == cache->end ()) return;
 
 	//! Fill lower queue [ O(m1) ]
-	for (it = cache->begin(); it != low_i; it++)
+	for (it = cache->begin (); it != low_i; it++)
 		queue_lower.push (*it);
 
 	cache->erase (cache->begin (), low_i);
@@ -101,8 +101,9 @@ void SETcache::update (double low, double upp) {
   if (upp_i == cache->end ()) return;
 
 	//! Fill upper queue [ O(m2) ]
+	//for_each (upp_i, cache->end (), queue_upper.push (*_1) );
 	for (it = upp_i; it != cache->begin (); it++)
-		queue_upper.push (*it);
+  	queue_upper.push (*it);
 
 	//! Delete those elements [ O(m1 + m2) ]
 	cache->erase (upp_i, cache->end());
