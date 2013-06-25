@@ -1,15 +1,16 @@
 #include <simring.hh>
 
-Query::Query (const packet& p): packet(p) {
-  gettimeofday(&scheduledDate, NULL);
-}
-
+Query::Query (const packet& p): packet(p) { }
 Query::Query (const Query& that): packet(that) {
   scheduledDate = that.scheduledDate;
   startDate = that.startDate;
   finishedDate = that.finishedDate;
 }
 
+void Query::setScheduledDate () {
+  gettimeofday (&scheduledDate, NULL);
+
+}
 void Query::setStartDate() {
   gettimeofday (&startDate, NULL);
 }

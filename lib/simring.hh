@@ -111,6 +111,7 @@ class Query: public packet {
 		Query (const Query&);
 
 		//setter
+    void setScheduledDate ();
 		void setStartDate ();
 		void setFinishedDate ();
 

@@ -39,7 +39,8 @@ ostream& operator<< (ostream& out, SETcache& in) {
  */
 bool SETcache::match (uint64_t idx, double ema, double low, double upp) {
 	diskPage a (idx);
-	update (low, upp); //! O(logn)
+  update (low, upp); //! O(logn)
+  //cout << "EMA: " << ema << "LOW: " << low << "UP: " << upp << endl;
 
 	if (cache->end () != cache->find (a)) {  //! If it is found O(log n)
 		return true;
@@ -89,22 +90,26 @@ void SETcache::update (double low, double upp) {
 
 	//! Set the iterators in the boundaries [ O(logn) ]
 	low_i = cache->lower_bound (diskPage ((uint64_t)(low + .5)));
-  if (low_i == cache->end ()) return;
 
-	//! Fill lower queue [ O(m1) ]
-	for (it = cache->begin (); it != low_i; it++)
-		queue_lower.push (*it);
+	if (! (low_i == cache->end ()) && !(low_i == cache->begin ())) {
 
-	cache->erase (cache->begin (), low_i);
-   
+		//! Fill lower queue [ O(m1) ]
+		for (it = cache->begin (); it != low_i; it++) {
+			queue_lower.push (*it);
+		}
+
+		cache->erase (cache->begin (), low_i);
+	}  
+
 	upp_i = cache->upper_bound (diskPage ((uint64_t)(upp + .5)));
-  if (upp_i == cache->end ()) return;
 
-	//! Fill upper queue [ O(m2) ]
-	//for_each (upp_i, cache->end (), queue_upper.push (*_1) );
-	for (it = upp_i; it != cache->begin (); it++)
-  	queue_upper.push (*it);
+	if (!(upp_i == cache->end ()) && !(upp_i == cache->begin ()))  {
 
-	//! Delete those elements [ O(m1 + m2) ]
-	cache->erase (upp_i, cache->end());
+		//! Fill upper queue [ O(m2) ]
+		for (it = upp_i; it != cache->end (); it++)
+			queue_upper.push (*it);
+
+		//! Delete those elements [ O(m1 + m2) ]
+		cache->erase (upp_i, cache->end());
+	}
 }

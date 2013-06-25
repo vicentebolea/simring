@@ -19,11 +19,11 @@ recv_msg (int socket, char* recv_data)
 {
   int nbytes, bytes_received = 0, r = 0;
   while (r != 4)
-		r += recv (socket, (char*) &nbytes+r, sizeof(int)-r, MSG_DONTWAIT);
+		r += recv (socket, (char*) &nbytes+r, sizeof(int)-r, MSG_WAITALL);
 
   // read nbytes;
   while (bytes_received < nbytes)
-		bytes_received += recv (socket, recv_data+bytes_received, nbytes-bytes_received, MSG_DONTWAIT);
+		bytes_received += recv (socket, recv_data+bytes_received, nbytes-bytes_received, MSG_WAITALL);
 
   recv_data [bytes_received] = 0;
 }

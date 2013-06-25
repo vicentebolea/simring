@@ -24,6 +24,8 @@ uint64_t hitCount = 0;
 uint64_t missCount = 0;
 uint64_t TotalExecTime = 0;
 uint64_t TotalWaitTime = 0;
+uint64_t shiftedQuery = 0;
+uint64_t SentShiftedQuery = 0;
 
 pthread_cond_t  cond_scheduler_empty = PTHREAD_COND_INITIALIZER;
 pthread_cond_t  cond_scheduler_full  = PTHREAD_COND_INITIALIZER;
@@ -34,6 +36,7 @@ pthread_mutex_t mutex_neighbor       = PTHREAD_MUTEX_INITIALIZER;
 pthread_t thread_disk;
 pthread_t thread_neighbor;
 pthread_t thread_scheduler;
+pthread_t thread_forward;
 
 char host_str [32]   = {0};
 char data_file [256] = {0};
@@ -48,8 +51,6 @@ ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
 ssize_t (*_sendto) (int, const void*, size_t, int) = send;
 int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
-
-bool query_send_peer        (packet&);
 
 //---------------------------------------------------------------------//
 //-----------END OF VARIABLES, FUNTIONS DEFINITIONS--------------------//
@@ -68,34 +69,35 @@ void* thread_func_scheduler (void* argv) {
 	for (char recv_data [LOT]; !panic; bzero (&recv_data, LOT)) {
 		recv_msg (sock, recv_data);
 
-		//When a new query arrive
+		//! When a new query arrive
 		if (strcmp (recv_data, "QUERY") == OK) {
-			Query aux;
+			Query query;
 
-			int ret = _recv (sock, static_cast<packet*>(&aux), 
-					sizeof(packet), 0);
+      query.setScheduledDate();
+
+			int ret = recv (sock, &query, sizeof(packet), MSG_WAITALL);
 			if (ret != sizeof (packet))
 				perror ("Receiving data");
 
 			pthread_mutex_lock (&mutex_scheduler);
 
-			queue_scheduler.push (aux);
-			queryRecieves++;
+		  query.setStartDate ();                                           
+  	  bool rt = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
+		  query.setFinishedDate();                                        
+      
+		  if (rt == true) hitCount++; else missCount++;
 
-			//pthread_cond_signal (&cond_scheduler_empty);
+		  queryProcessed++;                                                
+			queryRecieves++;
+      
+		  TotalExecTime += query.getExecTime();                           
+		  TotalWaitTime += query.getWaitTime();                           
+
 			pthread_mutex_unlock (&mutex_scheduler);
 
 			//When it ask for information
 		} else if (strcmp (recv_data, "INFO") == OK) {
 			char send_data [LOT] = "", tmp [256];
-      cout << "asking for info" << endl;
-
-			pthread_mutex_lock (&mutex_scheduler);
-
-			while (!queue_scheduler.empty ())
-				pthread_cond_wait (&cond_scheduler_full, &mutex_scheduler);
-
-			pthread_mutex_unlock (&mutex_scheduler);
 
 			sprintf (tmp, "CacheHit=%"      PRIu64 "\n", hitCount);
 			strncat (send_data, tmp, 256);
@@ -107,15 +109,19 @@ void* thread_func_scheduler (void* argv) {
 			strncat (send_data, tmp, 256);
 			sprintf (tmp, "TotalWaitTime=%" PRIu64 "\n", TotalWaitTime);
 			strncat (send_data, tmp, 256);
+			sprintf (tmp, "TotalWaitTime=%" PRIu64 "\n", TotalWaitTime);
+			strncat (send_data, tmp, 256);
+			sprintf (tmp, "shiftedQuery=%"  PRIu64 "\n", shiftedQuery);
+			strncat (send_data, tmp, 256);
+			sprintf (tmp, "SentShiftedQuery=%"  PRIu64 "\n", SentShiftedQuery);
+			strncat (send_data, tmp, 256);
 
 			_send (sock, send_data, LOT, 0);
 
 			//In case that we need to finish the execution 
 		} else if (strcmp (recv_data, "QUIT") == OK) {
-
 			panic = true;
 		  sleep (1);
-			pthread_cond_signal (&cond_scheduler_empty);
 
 		} else {
 			fprintf (stderr, "Unknown message received\n");
@@ -136,98 +142,25 @@ void* thread_func_neighbor (void* argv) {
 	socklen_t s = sizeof (sockaddr);
 
 	while (!panic) {
-	  //When a new query arrive
-		Query aux;
+		Query query;
 
-		int ret = recvfrom (sock_server, static_cast<packet*>(&aux),
-				sizeof (packet), MSG_DONTWAIT,
+		int ret = recvfrom (sock_server, &query, sizeof (packet), MSG_DONTWAIT,
 				(sockaddr*)&sa_server_peer, &s);
 
 		if (ret != sizeof (packet) && ret != -1) perror ("Receiving data");
-  	if (ret == -1) {
-  	  pthread_cond_signal (&cond_neighbor_empty);
-			pthread_mutex_unlock (&mutex_neighbor);
-  	  continue;
-  	}
+  	if (ret == -1) { continue; }
 
-		pthread_mutex_lock (&mutex_neighbor);
+		pthread_mutex_lock (&mutex_scheduler);
 
-		queue_neighbor.push (aux);
-		queryRecieves++;
+    //--------------Start measuring the time------------------//
+  	query.setStartDate ();                                           
+  	cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
+  	query.setFinishedDate();                                        
+  	//--------------Stop  measuring the time------------------//
 
-		pthread_cond_signal (&cond_neighbor_empty);
-		pthread_mutex_unlock (&mutex_neighbor);
-
-	}
-	pthread_cond_signal (&cond_neighbor_empty);
-	pthread_exit (EXIT_SUCCESS);
-}
-
-
-/*
- * @brief  Function thread to compute the query.
- *         It can be seen as the 2 producters and one consumer
- *         problem. 
- *
- * @args   Dummy parameter
- */
-void* thread_func_disk (void* argv) {
-	while (!panic) {
-
-		pthread_mutex_lock (&mutex_scheduler);  
-//		while (queue_scheduler.empty ()) {  
-			//pthread_cond_wait (&cond_scheduler_empty, &mutex_scheduler); 
-		  //if (panic) break;
-    //}
-
-		if (panic) break;
-
-		//--------------Start of the critical section--------------------//
-    if (!queue_scheduler.empty()) {
-
-		  Query query = queue_scheduler.front();                          
-      queue_scheduler.pop ();                                           
-   
-		  //--------------Start measuring the time------------------//
-		  query.setStartDate ();                                           
-		  bool ret = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
-		  query.setFinishedDate();                                        
-		  //--------------Stop  measuring the time------------------//
-
-		  if (ret == true) hitCount++; else missCount++;
-		  queryProcessed++;                                                
-
-		  TotalExecTime += query.getExecTime();                           
-		  TotalWaitTime += query.getWaitTime();                           
-    }
-		//-------------End of the crtical section------------------------//
+    shiftedQuery++;
 
 		pthread_mutex_unlock (&mutex_scheduler);
-//		queue_scheduler.empty () && pthread_cond_signal (&cond_scheduler_full);
-
-		if (panic) break;
-/*
-		pthread_mutex_lock (&mutex_neighbor);
-		//--------------Start of the critical section--------------------//
-    if (!queue_neighbor.empty()) {
-      Query query = queue_neighbor.front();
-      queue_scheduler.pop ();                                           
-  	  //-------------End of the crtical section------------------------//
-
-  	  //--------------Start measuring the time------------------//
-  	  query.setStartDate ();                                           
-  	  bool ret = cache.match (query.get_point (), query.low_b, query.upp_b);
-  	  query.setFinishedDate();                                        
-  	  //--------------Stop  measuring the time------------------//
-
-  	  if (ret == true) hitCount++; else missCount++;
-
-  	  queryProcessed++;                                                
-  	  TotalExecTime += query.getExecTime();                           
-  	  TotalWaitTime += query.getWaitTime();                           
-    }
-  	pthread_mutex_unlock (&mutex_neighbor);
-*/
 	}
 	pthread_exit (EXIT_SUCCESS);
 }
@@ -244,14 +177,16 @@ void * thread_func_forward (void * arg) {
     while (!cache.queue_lower.empty ()) {
 
       diskPage& DP = cache.queue_lower.front ();
-		  sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_left_peer, s);
+		  if (sizeof (diskPage) == sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_left_peer, s))
+        SentShiftedQuery++;
       cache.queue_lower.pop ();
     }
 
     while (!cache.queue_upper.empty ()) {
 
       diskPage& DP = cache.queue_upper.front ();
-		  sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_right_peer, s);
+		  if (sizeof (diskPage) == sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_right_peer, s));
+        SentShiftedQuery++;
       cache.queue_upper.pop ();
     }
   }
@@ -314,7 +249,10 @@ void setup_client_scheduler (const char* host_str) {
 	server_addr.sin_addr.s_addr = inet_addr (host_str);
 	bzero (&(server_addr.sin_zero), 8);
 
-	EXIT_IF (_connect (sock, (sockaddr*)&server_addr, s), "CONNECT SCHEDULER");
+	EXIT_IF (connect (sock, (sockaddr*)&server_addr, s), "CONNECT SCHEDULER");
+  char hostname [128];
+  gethostname (hostname, 128);
+  cout << "[HN: " << hostname << "] Linked with the scheduler"<<endl;
 }
 
 /*

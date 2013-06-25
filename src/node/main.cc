@@ -17,15 +17,11 @@ int main (int argc, const char** argv) {
  setup_client_peer (port, peer_right, peer_left);
  gettimeofday (&start, NULL);
 
-// pthread_mutex_lock (&mutex_scheduler); /* Initialize the lock to 0 */
- //pthread_mutex_lock (&mutex_neighbor);  /* Initialize the lock to 0 */
-
- pthread_create (&thread_disk,      NULL, thread_func_disk,      NULL);
  pthread_create (&thread_neighbor,  NULL, thread_func_neighbor,  NULL);
  pthread_create (&thread_scheduler, NULL, thread_func_scheduler, NULL);
+ pthread_create (&thread_forward,   NULL, thread_func_forward,   NULL);
 
  pthread_join (thread_scheduler, NULL);
- pthread_join (thread_disk,      NULL);
  pthread_join (thread_neighbor,  NULL);
 
  gettimeofday (&end, NULL);
@@ -38,7 +34,7 @@ int main (int argc, const char** argv) {
  cout << "Processed: " << queryProcessed << " queries" << endl;
  cout << "CacheHits: " << hitCount << " diskPages" << endl;
  cout << "TotalExecTime: " << TotalExecTime << " 10E-6 s" << endl;
- cout << "TotalWaitTime: " << TotalWaitTime << " 10E-6 s" << endl;
+ cout << "TotalWaitTime: " << (long double) TotalWaitTime << " 10E-6 s" << endl;
  cout << "TotalTime: " << timediff (&end, &start) << " 10E-6 s" << endl;
 
  close (sock);

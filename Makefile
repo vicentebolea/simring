@@ -24,8 +24,8 @@ src:
 	$(MAKE) -C src/
 
 clean:
-	$(MAKE) -C lib/ clean
-	$(MAKE) -C src/ clean
+	-$(MAKE) -C lib/ clean
+	-$(MAKE) -C src/ clean
 
 dist: clean
 	tar -cvzf simulator_simple_`date +"%d-%m-%y"`.tar.gz ./*

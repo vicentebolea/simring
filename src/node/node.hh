@@ -52,6 +52,7 @@ extern pthread_mutex_t mutex_neighbor;
 extern pthread_t thread_disk;
 extern pthread_t thread_neighbor;
 extern pthread_t thread_scheduler;
+extern pthread_t thread_forward;
 
 extern ssize_t (*_recv)     (int, void*, size_t, int);
 extern ssize_t (*_send)     (int, const void*, size_t, int);
@@ -68,7 +69,6 @@ void parse_args             (int, const char**);
 
 void* thread_func_scheduler (void*) WEAK;
 void* thread_func_neighbor  (void*) WEAK;
-void* thread_func_disk      (void*) WEAK;
 void* thread_func_forward   (void*) WEAK;
 
 void setup_server_peer      (int) WEAK;
