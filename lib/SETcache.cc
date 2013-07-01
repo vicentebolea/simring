@@ -39,7 +39,7 @@ ostream& operator<< (ostream& out, SETcache& in) {
  */
 bool SETcache::match (uint64_t idx, double ema, double low, double upp) {
 	diskPage a (idx);
-  update (low, upp); //! O(logn)
+  //update (low, upp); //! O(logn)
   //cout << "EMA: " << ema << "LOW: " << low << "UP: " << upp << endl;
 
 	if (cache->end () != cache->find (a)) {  //! If it is found O(log n)

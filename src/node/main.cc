@@ -25,12 +25,12 @@ int main (int argc, const char** argv) {
 
  gettimeofday (&start, NULL);
  pthread_create (&thread_scheduler, NULL, thread_func_scheduler, NULL);
- pthread_create (&thread_neighbor,  NULL, thread_func_neighbor, &addr_server);
- pthread_create (&thread_forward,   NULL, thread_func_forward, addr_vec);
+ //pthread_create (&thread_neighbor,  NULL, thread_func_neighbor, &addr_server);
+// pthread_create (&thread_forward,   NULL, thread_func_forward, addr_vec);
 
  pthread_join (thread_scheduler, NULL);
- pthread_join (thread_forward,  NULL);
- pthread_join (thread_neighbor,  NULL);
+ //pthread_join (thread_forward,  NULL);
+ //pthread_join (thread_neighbor,  NULL);
 
  gettimeofday (&end, NULL);
  //cout.width (20);
