@@ -157,7 +157,7 @@ void catchSignal (int Signal) {
 
 int main (int argc, char** argv) {
  int c;
- uint32_t nqueries = 0, step = 10000;
+ uint32_t nqueries = 0, step = 10000, count_queries = 0;
  uint32_t cnt = 0;
  struct timeval start, end;
 
@@ -251,6 +251,7 @@ int main (int argc, char** argv) {
   toSend.low_b = backend [selected]->get_low();
   toSend.upp_b = backend [selected]->get_upp();
   toSend.EMA   = backend [selected]->get_EMA();
+  toSend.time_stamp = ++count_queries;
 
   send_msg (connected[selected], "QUERY");
   send (connected[selected], &toSend, sizeof (packet), 0);

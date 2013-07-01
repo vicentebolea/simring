@@ -7,11 +7,11 @@
 #include <node.hh>
 #include <simring.hh>
 #include <queue>
-#define CACHESIZE 1000
+#define CACHESIZE 100000
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
-SETcache cache (CACHESIZE); 
+LRUcache cache (CACHESIZE); 
 int sock_scheduler, sock_left, sock_right, sock_server;  
 
 bool panic = false;
@@ -65,7 +65,7 @@ void* thread_func_scheduler (void* argv) {
 			pthread_mutex_lock (&mutex_scheduler);
 
 		  query.setStartDate ();                                           
-  	  bool rt = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
+  	  bool rt = cache.match (query.get_point (), query.time_stamp, query.EMA, query.low_b, query.upp_b);
 		  query.setFinishedDate ();                                        
       
 		  if (rt == true) hitCount++; else missCount++;
@@ -151,7 +151,7 @@ void * thread_func_neighbor (void* argv) {
 			pthread_mutex_lock (&mutex_scheduler);
 
       assert (query.EMA > 0 && query.low_b > 0 && query.upp_b); //! Invariant
-			cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
+			cache.match (query.get_point (), query.time_stamp, query.EMA, query.low_b, query.upp_b);
 			shiftedQuery++;
 
 			pthread_mutex_unlock (&mutex_scheduler);

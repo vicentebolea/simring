@@ -29,7 +29,7 @@ using namespace std;
 #define EXIT_IF(x,m) if ((x) == -1) {error (EXIT_FAILURE, errno, (m));}
 
 extern bool panic;
-extern SETcache cache; 
+extern LRUcache cache; 
 
 extern uint32_t queryRecieves;
 extern uint32_t queryProcessed;

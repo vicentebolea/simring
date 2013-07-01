@@ -86,7 +86,7 @@ uint64_t prepare_input (char* in);
  */
 class packet {
 	public:
-    uint64_t point; 
+    uint64_t point, time_stamp; 
     double low_b, upp_b, EMA;
 
 		packet () : point (0) {}
@@ -150,10 +150,11 @@ class Node {
 
 class diskPage {
 	public:
-		uint64_t index;
+		uint64_t index, time_stamp;
 		char chunk [DPSIZE];
 
 		diskPage (const uint64_t i) : index (i) {}
+		diskPage (const uint64_t i, const uint64_t t) : index (i), time_stamp (t) {}
 
 		diskPage (const diskPage& that) {
 			index = that.index;
@@ -167,11 +168,15 @@ class diskPage {
 		}
 
 		bool operator== (const diskPage& that) {
-			return index == that.index ? true: false;
+			return time_stamp == that.time_stamp ? true: false;
 		}
 
     static bool less_than (const diskPage& a, const diskPage& b) {
      return (a.index < b.index);
+    }
+
+    static bool less_than_lru (const diskPage& a, const diskPage& b) {
+     return (a.time_stamp < b.time_stamp);
     }
 };
 
@@ -197,21 +202,24 @@ class SETcache {
 
 class LRUcache {
 	protected:
-		lru_map<uint64_t, diskPage>* cache;
-		set<uint64_t> bst;
+		set<diskPage, bool (*) (const diskPage&, const diskPage&)>* cache_item;
+		set<diskPage, bool (*) (const diskPage&, const diskPage&)>* cache_time;
 		char path [256];
-
-		void insert (uint64_t);
+    int _max;
+    uint64_t count;
 
 	public:
-		LRUcache (int);
+    LRUcache (int, char * p = NULL);
+    ~LRUcache () { delete cache_item; delete cache_time; }
 
 		void setDataFile (char*);
-		void match (uint64_t , uint64_t*, uint64_t*);
+		bool match (uint64_t, uint64_t, double, double, double);
 		void update (double, double);
 
 		queue<diskPage> queue_lower;
 		queue<diskPage> queue_upper;
+
+    friend ostream& operator<< (ostream&, LRUcache&);
 };
 
 #endif
