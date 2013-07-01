@@ -1,5 +1,6 @@
 #include <signal.h>
 #include <simring.hh>
+#include <setjmp.h>
 
 #define RULER()                                        \
    printf ("%-80.145s\n", (                            \
@@ -18,13 +19,10 @@ uint64_t TotalCacheHit = 0, TotalCacheMiss = 0,  numQuery = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0, shiftedQuery = 0, SentShiftedQuery = 0; 
 uint64_t AveExecTime = 0, AveWaitTime = 0; 
 uint64_t MaxExecTime = 0, MaxWaitTime = 0; 
+static jmp_buf finish;
 
-/*
- * 
- */
 void receive_all (void) {
 	char recv_data [LOT];
-  char INFO [] = "INFO";
 
 	TotalCacheHit = 0, TotalCacheMiss = 0,  numQuery = 0;
   TotalExecTime = 0, TotalWaitTime = 0; 
@@ -33,7 +31,7 @@ void receive_all (void) {
   SentShiftedQuery = 0, shiftedQuery = 0;
 
 	for (int i = 0; i < nservers; i++)
-		send_msg (connected[i], INFO, strlen(INFO));  
+		send_msg (connected[i], "INFO");  
 
 	for (int i = 0; i < nservers; i++) {  
 
@@ -88,7 +86,7 @@ void print_header (void) {
    "|%15.15s|%15.15s|%15.15s|%15.15s|%15.15s|%15.15s|" 
    "%15.15s|%15.15s|%15.15s|\n", 
 
-   "Queries", "TotalHits", "TotalMiss", "ShiftedQuery", "SentShiftedQuery",
+   "Queries", "Hits", "Miss", "ShiftedQuery", "SentShiftedQuery",
    "TotalExecTime", "MaxExecTime", "AveExecTime", "AveWaitTime"
  );
  RULER ();
@@ -151,6 +149,7 @@ void wakeUpServer (void) {
  */
 void catchSignal (int Signal) {
  cerr << "Closing sockets & files.\t Signal: " <<  strsignal(Signal) << endl;
+ longjmp (finish, 1);
  close (sock);
  exit (EXIT_FAILURE);
 }
@@ -179,12 +178,13 @@ int main (int argc, char** argv) {
    exit (EXIT_FAILURE);
  }
 
+ 
  //Dynamic memory
  client_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in) * nservers);
  connected = new int16_t [nservers];
  backend = new Node* [nservers];
  queryCount  = new uint32_t [nservers];
-
+ 
  signal (SIGINT, catchSignal);		//catching signals to close sockets and files
  signal (SIGSEGV, catchSignal);
  signal (SIGTERM, catchSignal);
@@ -202,6 +202,7 @@ int main (int argc, char** argv) {
  
  //! Initiliaze the node equally
  const uint64_t data_interval = 1000000;
+ if (setjmp (finish)) goto end; 
  { 
    int j = 0;
    for (uint64_t i = 0; i < data_interval; i += (data_interval/nservers)) {
@@ -215,6 +216,8 @@ int main (int argc, char** argv) {
   int selected = 0;
   uint64_t point = prepare_input (line);
   double minDist = DBL_MAX;
+  
+  //usleep (50);
 
   for (int i = 0; i < nservers; i++) {
    if (backend[i]->get_distance (point) < minDist) {
@@ -244,17 +247,16 @@ int main (int argc, char** argv) {
   //cout << " EMA: " <<  backend[selected]->get_EMA ();
   //cout << " SENDING: " << point << " LOW: " << backend[selected]->get_low() << " UPP: " << backend[selected]->get_upp() << endl;
 
-
   packet toSend (point);
   toSend.low_b = backend [selected]->get_low();
   toSend.upp_b = backend [selected]->get_upp();
   toSend.EMA   = backend [selected]->get_EMA();
 
-  char query [] = "QUERY";
-  send_msg (connected[selected], query, strlen (query));
+  send_msg (connected[selected], "QUERY");
   send (connected[selected], &toSend, sizeof (packet), 0);
 
   if ((cnt + 1) % step == 0) {
+   sleep (1);
    receive_all ();
    print_out ();
   }
@@ -262,12 +264,14 @@ int main (int argc, char** argv) {
  RULER ();
 
  //! Delete dynamic objects and say bye to back-end severs
- char QUIT[] = "QUIT";
  for (int i = 0; i < nservers; i++)
-  send_msg (connected[i], QUIT, strlen(QUIT));  
+  send_msg (connected[i], "QUIT");  
 
  gettimeofday (&end, NULL);
  printf ("SchedulerTime:\t %20LE S\n", (long double) timediff (&end, &start) / 1000000.0);
+
+
+end:
 
  //! Close sockets
  close (sock);

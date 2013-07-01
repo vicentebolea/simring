@@ -8,9 +8,10 @@ timediff (struct timeval *end_time, struct timeval *start_time)
 }
 
 void
-send_msg (int socket, char* send_data, int msg_len)
+send_msg (int socket, char* send_data)
 {
-  send (socket, (char*)&msg_len, sizeof(int), 0); 
+  int msg_len = strlen (send_data);
+  send (socket, &msg_len, sizeof(int), 0); 
   send (socket, send_data, msg_len, 0); 
 }
 

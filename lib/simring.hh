@@ -75,7 +75,7 @@ using namespace std;
 using namespace boost::lambda;
 
 uint64_t timediff      (struct timeval*, struct timeval*);
-void     send_msg      (int, char*, int);
+void     send_msg      (int, char*);
 void     recv_msg      (int, char*) __attribute__((weak));
 int      poisson       (double);
 int64_t  hilbert       (int64_t n, int64_t x, int64_t y);
@@ -125,7 +125,7 @@ class Node {
 	double EMA, low_b, upp_b, alpha;
 
  public:
-  Node (double a) : EMA (.0), low_b (.0), upp_b (.0) , alpha (a) {} 
+  Node (double a) : EMA (.0), low_b (.0), upp_b (.0), alpha (a) {} 
   Node (double a, double e) : EMA (e), low_b (.0), upp_b (.0) , alpha (a) {} 
   void set_low (double l) { low_b = l; }
   void set_upp (double u) { upp_b = u; } 
