@@ -61,6 +61,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <cfloat>
 #include <string.h>
 #include <stdlib.h>
@@ -153,6 +154,7 @@ class diskPage {
 		uint64_t index;
 		char chunk [DPSIZE];
 
+		diskPage () : index (0) {}
 		diskPage (const uint64_t i) : index (i) {}
 
 		diskPage (const diskPage& that) {
@@ -181,16 +183,25 @@ class SETcache {
 		char path [256];
     int _max;
     uint64_t count;
+    double boundary_low, boundary_upp, ema;
+		pthread_mutex_t mutex_match     ;
+		pthread_mutex_t mutex_queue_low ;
+		pthread_mutex_t mutex_queue_upp ;
+
+    void pop_farthest ();
 
 	public:
     SETcache (int, char * p = NULL);
 
 		void setDataFile (char*);
 		bool match (uint64_t, double, double, double);
-		void update (double, double);
+    bool is_valid (diskPage&);
 
 		queue<diskPage> queue_lower;
 		queue<diskPage> queue_upper;
+ 
+    diskPage get_low ();
+    diskPage get_upp ();
 
     friend ostream& operator<< (ostream&, SETcache&);
 };
