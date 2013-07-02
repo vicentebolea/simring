@@ -134,7 +134,7 @@ void * thread_func_neighbor (void* argv) {
   assert (addr->sin_family == AF_INET);
 
 	while (!panic) {
-		Query query;
+		diskPage dp;
     struct timeval timeout = {1, 0};
 
     fd_set readSet;
@@ -143,15 +143,14 @@ void * thread_func_neighbor (void* argv) {
 
 		if ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet)) {
 
-			int ret = recvfrom (sock_server, &query, sizeof (packet), 0, (sockaddr*)addr, &s);
+			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr, &s);
 
-			if (ret != sizeof (packet) && ret != -1) perror ("Receiving data");
+			if (ret != sizeof (diskPage) && ret != -1) perror ("Receiving data");
 			if (ret == -1) { continue; }
 
 			pthread_mutex_lock (&mutex_scheduler);
 
-      assert (query.EMA > 0 && query.low_b > 0 && query.upp_b); //! Invariant
-			cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
+			cache.match (dp.index, query.EMA, query.low_b, query.upp_b);
 			shiftedQuery++;
 
 			pthread_mutex_unlock (&mutex_scheduler);
