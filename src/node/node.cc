@@ -147,9 +147,9 @@ void * thread_func_neighbor (void* argv) {
 			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr, &s);
 
 			if (ret != sizeof (diskPage) && ret != -1) perror ("Receiving data");
-			if (ret == -1) { continue; }
+			if (ret == -1) continue;
 
-      if (cache.is_valid (dp)) shiftedQuery++;
+      cache.is_valid (dp) && shiftedQuery++;
 		}
 	}
 	pthread_exit (EXIT_SUCCESS);
@@ -162,10 +162,9 @@ void * thread_func_neighbor (void* argv) {
  */
 void * thread_func_forward (void * argv) {
 	socklen_t s = sizeof (struct sockaddr);	
-	struct sockaddr_in* addr_left = *((struct sockaddr_in**)argv + 0);
+	struct sockaddr_in* addr_left  = *((struct sockaddr_in**)argv + 0);
 	struct sockaddr_in* addr_right = *((struct sockaddr_in**)argv + 1);
-	assert (addr_left->sin_family == AF_INET);
-	assert (addr_right->sin_family == AF_INET);
+	assert (addr_left->sin_family == AF_INET && addr_right->sin_family == AF_INET);
 
 	while (!panic) {
 		if (!cache.queue_lower.empty ()) {
