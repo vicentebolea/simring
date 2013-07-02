@@ -20,6 +20,7 @@ void LRUcache::match (uint64_t idx, uint64_t* hit, uint64_t* miss) {
 
 		*miss = *miss + 1; // miss
 		long currentChunk = a.index * DPSIZE; //! read a block from a file
+    usleep (1000);
 		ifstream file (path, ios::in | ios::binary);
 
 		if (!file.good ()) { perror ("FILE NOT FOUND"); exit (EXIT_FAILURE); } 
