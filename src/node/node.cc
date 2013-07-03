@@ -59,17 +59,12 @@ void* thread_func_scheduler (void* argv) {
       query.setScheduledDate ();
 
 			int ret = recv (sock_scheduler, &query, sizeof(packet), 0);
-			if (ret != sizeof (packet))
-				perror ("Receiving data");
-
-//			pthread_mutex_lock (&mutex_scheduler);
+			if (ret != sizeof (packet)) perror ("Receiving data");
 
 		  query.setStartDate ();                                           
   	  bool rt = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
 		  query.setFinishedDate ();                                        
 
-			//pthread_mutex_unlock (&mutex_scheduler);
-      
 		  if (rt == true) hitCount++; else missCount++;
 
 		  queryProcessed++;                                                
@@ -78,8 +73,7 @@ void* thread_func_scheduler (void* argv) {
 		  TotalExecTime += query.getExecTime ();                            
 		  TotalWaitTime += query.getWaitTime ();                           
 
-
-			//When it ask for information
+	  //! When it ask for information
 		} else if (strcmp (recv_data, "INFO") == OK) {
 			char send_data [LOT] = "", tmp [256];
       struct timeval timeout = {1, 0};
@@ -109,7 +103,7 @@ void* thread_func_scheduler (void* argv) {
 
 			_send (sock_scheduler, send_data, LOT, 0);
 
-			//In case that we need to finish the execution 
+	  //! In case that we need to finish the execution 
 		} else if (strcmp (recv_data, "QUIT") == OK) {
 			panic = true;
 		  sleep (1);
