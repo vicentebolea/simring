@@ -59,15 +59,12 @@ void* thread_func_scheduler (void* argv) {
       query.setScheduledDate ();
 
 			int ret = recv (sock_scheduler, &query, sizeof(packet), 0);
-			if (ret != sizeof (packet))
-				perror ("Receiving data");
-
-			pthread_mutex_lock (&mutex_scheduler);
+			if (ret != sizeof (packet)) perror ("Receiving data");
 
 		  query.setStartDate ();                                           
   	  bool rt = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
 		  query.setFinishedDate ();                                        
-      
+
 		  if (rt == true) hitCount++; else missCount++;
 
 		  queryProcessed++;                                                
@@ -76,9 +73,7 @@ void* thread_func_scheduler (void* argv) {
 		  TotalExecTime += query.getExecTime ();                            
 		  TotalWaitTime += query.getWaitTime ();                           
 
-			pthread_mutex_unlock (&mutex_scheduler);
-
-			//When it ask for information
+	  //! When it ask for information
 		} else if (strcmp (recv_data, "INFO") == OK) {
 			char send_data [LOT] = "", tmp [256];
       struct timeval timeout = {1, 0};
@@ -108,7 +103,7 @@ void* thread_func_scheduler (void* argv) {
 
 			_send (sock_scheduler, send_data, LOT, 0);
 
-			//In case that we need to finish the execution 
+	  //! In case that we need to finish the execution 
 		} else if (strcmp (recv_data, "QUIT") == OK) {
 			panic = true;
 		  sleep (1);
@@ -134,7 +129,7 @@ void * thread_func_neighbor (void* argv) {
   assert (addr->sin_family == AF_INET);
 
 	while (!panic) {
-		Query query;
+		diskPage dp;
     struct timeval timeout = {1, 0};
 
     fd_set readSet;
@@ -143,18 +138,12 @@ void * thread_func_neighbor (void* argv) {
 
 		if ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet)) {
 
-			int ret = recvfrom (sock_server, &query, sizeof (packet), 0, (sockaddr*)addr, &s);
+			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr, &s);
 
-			if (ret != sizeof (packet) && ret != -1) perror ("Receiving data");
+			if (ret != sizeof (diskPage) && ret != -1) perror ("Receiving data");
 			if (ret == -1) { continue; }
 
-			pthread_mutex_lock (&mutex_scheduler);
-
-      assert (query.EMA > 0 && query.low_b > 0 && query.upp_b); //! Invariant
-			cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
-			shiftedQuery++;
-
-			pthread_mutex_unlock (&mutex_scheduler);
+      if (cache.is_valid (dp)) shiftedQuery++;
 		}
 	}
 	pthread_exit (EXIT_SUCCESS);
@@ -173,23 +162,19 @@ void * thread_func_forward (void * argv) {
 	assert (addr_right->sin_family == AF_INET);
 
 	while (!panic) {
-		pthread_mutex_lock (&mutex_scheduler);
-		while (!cache.queue_lower.empty ()) {
+		if (!cache.queue_lower.empty ()) {
 
-			diskPage& DP = cache.queue_lower.front ();
-			SentShiftedQuery++;
+			diskPage DP = cache.get_low ();
 			sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)addr_left, s);
-			cache.queue_lower.pop ();
-		}
-
-		while (!cache.queue_upper.empty ()) {
-
-			diskPage& DP = cache.queue_upper.front ();
 			SentShiftedQuery++;
-			sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)addr_right, s); 
-			cache.queue_upper.pop ();
 		}
-		pthread_mutex_unlock (&mutex_scheduler);
+
+		if (!cache.queue_upper.empty ()) {
+
+			diskPage DP = cache.get_upp ();
+			sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)addr_right, s); 
+			SentShiftedQuery++;
+		}
 	}
 	pthread_exit (EXIT_SUCCESS);
 }
