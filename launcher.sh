@@ -41,4 +41,4 @@ ssh raven14 /home/vicente/simring/src/node/node -h 10.20.12.170 -p 19999 -d /scr
 ssh raven15 /home/vicente/simring/src/node/node -h 10.20.12.170 -p 19999 -d /scratch/youngmoon01/garbage2.bin -l 192.168.1.14 -r 192.168.1.16&
 ssh raven16 /home/vicente/simring/src/node/node -h 10.20.12.170 -p 19999 -d /scratch/youngmoon01/garbage2.bin -l 192.168.1.15 -r nothing &
 
-/home/vicente/simring/src/scheduler/scheduler -p 19999 -n 16 -q 200000 -s 10000 < /home/vicente/simring/src/scheduler/input1.dat
+/home/vicente/simring/src/scheduler/scheduler -p 19999 -n 16 -q 500000 -s 10000 < /home/vicente/simring/src/scheduler/input_normal.dat

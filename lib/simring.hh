@@ -16,7 +16,7 @@
 #define FAIL -1
 
 #ifndef DPSIZE
-#define DPSIZE 4096
+#define DPSIZE (2 << 13)
 #endif
 
 #ifndef DATAFILE
@@ -192,6 +192,7 @@ class SETcache {
 
 	public:
     SETcache (int, char * p = NULL);
+    ~SETcache () { delete cache; }
 
 		void setDataFile (char*);
 		bool match (uint64_t, double, double, double);
