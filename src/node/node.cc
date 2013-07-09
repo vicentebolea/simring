@@ -7,7 +7,7 @@
 #include <node.hh>
 #include <simring.hh>
 #include <queue>
-#define CACHESIZE 1000
+#define CACHESIZE 10000
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;

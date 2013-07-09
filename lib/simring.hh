@@ -197,6 +197,7 @@ class SETcache {
 		void setDataFile (char*);
 		bool match (uint64_t, double, double, double);
     bool is_valid (diskPage&);
+    void update (double low, double upp);
 
 		queue<diskPage> queue_lower;
 		queue<diskPage> queue_upper;

@@ -7,7 +7,7 @@ all: clean compile
 
 compile:
 	g++ -c node.cc -g -Wall -std=gnu++98 $(INCLUDE)
-	g++ -c main.cc -g -Wall -std=gnu++98 $(INCLUDE)
+	g++ -c main.cc -g -Wall -std=gnu++98 $(INCLUDE) $(OPTIONS)
 
 clean:
 	-rm *.o node

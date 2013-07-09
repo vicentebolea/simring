@@ -1,5 +1,6 @@
 #include <signal.h>
 #include <simring.hh>
+#include <err.h>
 #include <setjmp.h>
 
 #define RULER()                                        \
@@ -116,32 +117,24 @@ void wakeUpServer (void) {
  int one = 1;
  struct sockaddr_in server_addr;
 
- if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == -1) {
-  perror ("Socket");
-  exit (EXIT_FAILURE);
- }
-
- if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int)) == -1) {
-  perror ("Setsockopt");
-  exit (EXIT_FAILURE);
- }
-
  server_addr.sin_family = AF_INET;
  server_addr.sin_port = htons (port);
  server_addr.sin_addr.s_addr = INADDR_ANY;
  bzero (&(server_addr.sin_zero),8);
 
- if (bind (sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
-  perror ("SCHEDULER: Unable to bind");
-  exit (EXIT_FAILURE);
- }
+ if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == -1)
+  err (EXIT_FAILURE, "[SCHEDULER] Socket");
 
- if (listen (sock, nservers + 1) == -1) {
-  perror ("Listen");
-  exit (EXIT_FAILURE);
- }
+ if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int)) == -1)
+  err (EXIT_FAILURE, "[SCHEDULER] Setsockopt");
 
- cout << "TCPServer Waiting for client on port: " << PORT << endl;
+ if (bind (sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
+  err (EXIT_FAILURE, "[SCHEDULER] Unable to bind");
+
+ if (listen (sock, nservers + 1) == -1)
+  err (EXIT_FAILURE, "[SCHEDULER] Listen");
+
+ printf ("[SCHEDULER] Network setted up using port = %i\n", port);
 }
 
 /*
@@ -173,11 +166,8 @@ int main (int argc, char** argv) {
    case 's': step = atoi (optarg);     break;
   }
 
- if (!nqueries || !nservers || !port) {
-   fprintf (stderr, "PARSER: all the options needs to be setted\n");
-   exit (EXIT_FAILURE);
- }
-
+ if (!nqueries || !nservers || !port)
+   err (EXIT_FAILURE, "[SCHEDULER] PARSER: all the options needs to be setted");
  
  //Dynamic memory
  client_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in) * nservers);
@@ -185,17 +175,18 @@ int main (int argc, char** argv) {
  backend = new Node* [nservers];
  queryCount  = new uint32_t [nservers];
  
- signal (SIGINT, catchSignal);		//catching signals to close sockets and files
- signal (SIGSEGV, catchSignal);
- signal (SIGTERM, catchSignal);
+ signal (SIGINT | SIGSEGV | SIGTERM, catchSignal);		//catching signals to close sockets and files
+ //signal (SIGSEGV, catchSignal);
+ //signal (SIGTERM, catchSignal);
 
  wakeUpServer();
 
  for (int i = 0; i < nservers; i++) {  
   socklen_t sin_size = sizeof(struct sockaddr_in);
   connected[i] = accept (sock, (struct sockaddr *)&client_addr[i], &sin_size);
-  printf ("I got a connection from %s\n", inet_ntoa(client_addr[i].sin_addr)); 
+  printf ("[SCHEDULER] Backend server no [%i] linked (addr = %s).\n", i, inet_ntoa(client_addr[i].sin_addr)); 
  } 
+ printf ("[SCHEDULER] All backend servers linked\n");
 
  gettimeofday (&start, NULL);
  print_header ();
@@ -231,26 +222,23 @@ int main (int argc, char** argv) {
     backend[selected]->set_low (.0);
 
   } else {
-    backend[selected]->set_low ((backend [selected]->get_EMA () - backend [(selected - 1)]->get_EMA ()) / 2.0);
+    backend[selected]->set_low (backend [selected]->get_EMA() - ((backend [selected]->get_EMA () - backend [(selected - 1)]->get_EMA ()) / 2.0));
   } 
 
   if (selected == nservers - 1 || backend[selected + 1] == NULL) {
     backend[selected]->set_upp (DBL_MAX);  //! For now lets fix the last node upp boundary in the maximum num
 
   } else {
-    backend[selected]->set_upp ((backend [selected + 1]->get_EMA () - backend [selected]->get_EMA ()) / 2.0);
+    backend[selected]->set_upp (backend [selected]->get_EMA() + ((backend [selected + 1]->get_EMA () - backend [selected]->get_EMA ()) / 2.0));
   }
 
   backend[selected]->update_EMA (point);
-
-  //cout << "NODE: " << selected;
-  //cout << " EMA: " <<  backend[selected]->get_EMA ();
-  //cout << " SENDING: " << point << " LOW: " << backend[selected]->get_low() << " UPP: " << backend[selected]->get_upp() << endl;
 
   packet toSend (point);
   toSend.low_b = backend [selected]->get_low();
   toSend.upp_b = backend [selected]->get_upp();
   toSend.EMA   = backend [selected]->get_EMA();
+  //if (selected == 4) cout << "NODE 5 EMA : " << toSend.EMA << " [ " << toSend.low_b << " , " << toSend.upp_b << " ]"<< endl;
 
   send_msg (connected[selected], "QUERY");
   send (connected[selected], &toSend, sizeof (packet), 0);
@@ -276,7 +264,6 @@ end:
  //! Close sockets
  close (sock);
  for (int i = 0; i < nservers; i++) close (connected[i]);
-
  for (int i = 0; i < nservers; i++) delete backend[i];
 
  free (client_addr);

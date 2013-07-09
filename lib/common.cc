@@ -74,6 +74,8 @@ hilbert (int64_t n, int64_t x, int64_t y)
 uint64_t prepare_input (char* in) {
  int64_t a, b, ret;
  sscanf (in, "%" SCNi64 " %" SCNi64 , &a , &b );
+ a /= 2000;
+ b /= 2000;
  ret = hilbert (1024, a, b);
  return ret;
 }
