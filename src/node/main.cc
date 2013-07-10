@@ -7,7 +7,6 @@
 #include <node.hh>
 #include <simring.hh>
 
-#define DATA_MIGRATION
 
 int main (int argc, const char** argv) {
  struct sockaddr_in addr_left, addr_right, addr_server;
@@ -27,12 +26,14 @@ int main (int argc, const char** argv) {
 
  gettimeofday (&start, NULL);
  pthread_create (&thread_scheduler, NULL, thread_func_scheduler, NULL);
+
 #ifdef DATA_MIGRATION
  pthread_create (&thread_neighbor,  NULL, thread_func_neighbor, &addr_server);
  pthread_create (&thread_forward,   NULL, thread_func_forward, addr_vec);
 #endif
 
  pthread_join (thread_scheduler, NULL);
+
 #ifdef DATA_MIGRATION
  pthread_join (thread_forward,  NULL);
  pthread_join (thread_neighbor,  NULL);

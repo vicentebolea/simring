@@ -21,6 +21,7 @@ uint64_t TotalExecTime = 0, TotalWaitTime = 0, shiftedQuery = 0, SentShiftedQuer
 uint64_t AveExecTime = 0, AveWaitTime = 0; 
 uint64_t MaxExecTime = 0, MaxWaitTime = 0; 
 static jmp_buf finish;
+Node** backend;
 
 void receive_all (void) {
 	char recv_data [LOT];
@@ -31,13 +32,11 @@ void receive_all (void) {
   MaxExecTime = 0, MaxWaitTime = 0; 
   SentShiftedQuery = 0, shiftedQuery = 0;
 
-	for (int i = 0; i < nservers; i++)
-		send_msg (connected[i], "INFO");  
-
+	for (int i = 0; i < nservers; i++) backend[i]->send_msg ("INFO");  
 	for (int i = 0; i < nservers; i++) {  
 
 		bzero (recv_data, LOT);
-		recv (connected[i], recv_data, LOT, MSG_WAITALL);
+		recv (backend[i]->get_fd (), recv_data, LOT, MSG_WAITALL);
 
 		for (char *key= strtok(recv_data, "=\n"); key != NULL; key= strtok(NULL, "=\n")) { 
 			char* val = strtok (NULL, "=\n");
@@ -70,8 +69,6 @@ void receive_all (void) {
 			else if (strcmp(key, "SentShiftedQuery") == 0) {
 				SentShiftedQuery += strtoull (val, NULL, 10);
       }
-			else if (strcmp (key, "OK") != 0)
-				cerr << "[" << recv_data << "] @ " << i << endl;
 		}
     AveExecTime = TotalExecTime / nservers;
     AveWaitTime = TotalWaitTime / nservers;
@@ -149,15 +146,12 @@ void catchSignal (int Signal) {
 
 
 int main (int argc, char** argv) {
- int c;
  uint32_t nqueries = 0, step = 10000;
  uint32_t cnt = 0;
+ const uint64_t data_interval = 1000000;
  struct timeval start, end;
 
- struct sockaddr_in* client_addr;    
- uint32_t* queryCount;
- Node** backend;
-
+ int c;
  while ((c = getopt(argc, const_cast<char**> (argv), "q:n:p:s:")) != -1)
   switch (c) {
    case 'q': nqueries = atoi (optarg); break;
@@ -169,38 +163,27 @@ int main (int argc, char** argv) {
  if (!nqueries || !nservers || !port)
    err (EXIT_FAILURE, "[SCHEDULER] PARSER: all the options needs to be setted");
  
- //Dynamic memory
- client_addr = (struct sockaddr_in*) malloc (sizeof(struct sockaddr_in) * nservers);
- connected = new int16_t [nservers];
  backend = new Node* [nservers];
- queryCount  = new uint32_t [nservers];
- 
  signal (SIGINT | SIGSEGV | SIGTERM, catchSignal);		//catching signals to close sockets and files
- //signal (SIGSEGV, catchSignal);
- //signal (SIGTERM, catchSignal);
 
  wakeUpServer();
 
- for (int i = 0; i < nservers; i++) {  
-  socklen_t sin_size = sizeof(struct sockaddr_in);
-  connected[i] = accept (sock, (struct sockaddr *)&client_addr[i], &sin_size);
-  printf ("[SCHEDULER] Backend server no [%i] linked (addr = %s).\n", i, inet_ntoa(client_addr[i].sin_addr)); 
- } 
- printf ("[SCHEDULER] All backend servers linked\n");
+ for (int i = 0; i < nservers; i++) (backend[i] = new Node ())->accept (sock);
 
- gettimeofday (&start, NULL);
+ printf ("[SCHEDULER] All backend servers linked\n");
  print_header ();
+
+ if (setjmp (finish)) goto end; 
  
  //! Initiliaze the node equally
- const uint64_t data_interval = 1000000;
- if (setjmp (finish)) goto end; 
  { 
    int j = 0;
    for (uint64_t i = 0; i < data_interval; i += (data_interval/nservers)) {
-     backend [j++] = new Node (ALPHA, i + (data_interval/nservers)/2);
+     backend [j++]->set_alpha (ALPHA).set_EMA (i + (data_interval/nservers)/2);
    }
  }  
 
+ gettimeofday (&start, NULL);
  //! Main loop which use the given algorithm to send the queries
  for (char line[100]; fgets(line, 100, stdin) != NULL && cnt < nqueries; cnt++)
  {
@@ -216,32 +199,24 @@ int main (int argc, char** argv) {
     minDist = backend[i]->get_distance (point);
    }
   }
+  Node& victim = *(backend [selected]);
 
   //! :TODO: Circular boundaries
   if (selected == 0) {                     //! For now lets fix the first node low boundary in 0
-    backend[selected]->set_low (.0);
+    victim.set_low (.0);
 
   } else {
-    backend[selected]->set_low (backend [selected]->get_EMA() - ((backend [selected]->get_EMA () - backend [(selected - 1)]->get_EMA ()) / 2.0));
+    victim.set_low (victim.get_EMA() - ((victim.get_EMA () - backend [(selected - 1)]->get_EMA ()) / 2.0));
   } 
 
   if (selected == nservers - 1 || backend[selected + 1] == NULL) {
-    backend[selected]->set_upp (DBL_MAX);  //! For now lets fix the last node upp boundary in the maximum num
+    victim.set_upp (DBL_MAX);  //! For now lets fix the last node upp boundary in the maximum num
 
   } else {
-    backend[selected]->set_upp (backend [selected]->get_EMA() + ((backend [selected + 1]->get_EMA () - backend [selected]->get_EMA ()) / 2.0));
+    victim.set_upp (victim.get_EMA() + ((backend [selected + 1]->get_EMA () - victim.get_EMA ()) / 2.0));
   }
 
-  backend[selected]->update_EMA (point);
-
-  packet toSend (point);
-  toSend.low_b = backend [selected]->get_low();
-  toSend.upp_b = backend [selected]->get_upp();
-  toSend.EMA   = backend [selected]->get_EMA();
-  //if (selected == 4) cout << "NODE 5 EMA : " << toSend.EMA << " [ " << toSend.low_b << " , " << toSend.upp_b << " ]"<< endl;
-
-  send_msg (connected[selected], "QUERY");
-  send (connected[selected], &toSend, sizeof (packet), 0);
+  victim .update_EMA (point) .send (point);
 
   if ((cnt + 1) % step == 0) {
    sleep (1);
@@ -252,8 +227,7 @@ int main (int argc, char** argv) {
  RULER ();
 
  //! Delete dynamic objects and say bye to back-end severs
- for (int i = 0; i < nservers; i++)
-  send_msg (connected[i], "QUIT");  
+ for (int i = 0; i < nservers; i++) backend[i]->send_msg ("QUIT") .close ();  
 
  gettimeofday (&end, NULL);
  printf ("SchedulerTime:\t %20LE S\n", (long double) timediff (&end, &start) / 1000000.0);
@@ -263,11 +237,8 @@ end:
 
  //! Close sockets
  close (sock);
- for (int i = 0; i < nservers; i++) close (connected[i]);
+ for (int i = 0; i < nservers; i++) backend[i]->close ();
  for (int i = 0; i < nservers; i++) delete backend[i];
-
- free (client_addr);
- delete[] queryCount;
  delete[] backend;
 
  return EXIT_SUCCESS;

@@ -1,8 +1,9 @@
 #include <simring.hh>
 
+packet::packet () : point (0) {}
 packet::packet (uint64_t p) : point (p) {}	
-packet::packet (uint64_t p, uint64_t l, uint64_t u) 
- : point (p), low_b (l), upp_b (u) {}	
+packet::packet (uint64_t p, double e, double l, double u) 
+ : point (p), EMA (e), low_b (l), upp_b (u) {}	
 packet::packet (const packet& that) : point (that.point) {}
 
 packet& packet::operator= (const packet& that) {

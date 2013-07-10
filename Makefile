@@ -1,3 +1,14 @@
+########################
+# Policies List        #
+# ===================  #
+# - DATA_MIGRATION     #
+# - LRU POP POLICY     #
+# - PUSH POLICY        #
+# - BDEMA              #
+# - ROUND_ROBIN        #
+#                      #
+########################
+
 CXX = g++
 MAKE = make
 AR = ar
@@ -12,6 +23,9 @@ OPTIONS += 	-DDATA_MIGRATION=1
 #others parameters
 OPTIONS += 	-DLOT=1024
 
+POLICY = -DDATA_MIGRATION
+
+export POLICY CXX MAKE AR OPTIONS
 .PHONY: lib dist node docs
 
 all: lib src

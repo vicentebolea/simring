@@ -7,6 +7,7 @@
 #include <node.hh>
 #include <simring.hh>
 #include <queue>
+#include <err.h>
 #define CACHESIZE 10000
 
 queue<Query> queue_scheduler;
@@ -109,7 +110,9 @@ void* thread_func_scheduler (void* argv) {
 		  sleep (1);
 
 		} else {
-			fprintf (stderr, "Unknown message received\n");
+      char host_name [256];
+      gethostname (host_name, 256);
+			warn ("Unknown message received [ID: %s] [MSG: %s]", host_name, recv_data);
 			panic = true;
 		}
 	}
@@ -255,13 +258,12 @@ void parse_args (int argc, const char** argv, Arguments* args) {
 
 	// Check if everything was set
 	if (!args->host_str || !args->data_file || !args->port)
-		error (EXIT_FAILURE, errno, "PARSER: Arguments needs to be setted");
+		err (EXIT_FAILURE, "PARSER: Arguments needs to be setted");
 }
 
 void catch_signal (int arg) {
 	close_all ();
-	fprintf (stderr, "Sockets closed for security\n");
-	exit (EXIT_SUCCESS);
+	err (EXIT_SUCCESS, "Sockets closed for security");
 }
 
 void close_all () {
