@@ -110,14 +110,13 @@ void print_out (void) {
  * 
  */
 void wakeUpServer (void) {
-
  int one = 1;
- struct sockaddr_in server_addr;
+ struct sockaddr_in addr;
 
- server_addr.sin_family = AF_INET;
- server_addr.sin_port = htons (port);
- server_addr.sin_addr.s_addr = INADDR_ANY;
- bzero (&(server_addr.sin_zero),8);
+ addr.sin_family = AF_INET;
+ addr.sin_port = htons (port);
+ addr.sin_addr.s_addr = INADDR_ANY;
+ bzero (&(addr.sin_zero),8);
 
  if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == -1)
   err (EXIT_FAILURE, "[SCHEDULER] Socket");
@@ -125,7 +124,7 @@ void wakeUpServer (void) {
  if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int)) == -1)
   err (EXIT_FAILURE, "[SCHEDULER] Setsockopt");
 
- if (bind (sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
+ if (bind (sock, (struct sockaddr *)&addr, sizeof(struct sockaddr)) == -1)
   err (EXIT_FAILURE, "[SCHEDULER] Unable to bind");
 
  if (listen (sock, nservers + 1) == -1)

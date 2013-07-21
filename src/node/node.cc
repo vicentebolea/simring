@@ -8,7 +8,7 @@
 #include <simring.hh>
 #include <queue>
 #include <err.h>
-#define CACHESIZE 10000
+#define CACHESIZE 1000
 
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
@@ -26,13 +26,6 @@ uint64_t TotalWaitTime = 0;
 uint64_t shiftedQuery = 0;
 uint64_t SentShiftedQuery = 0;
 
-pthread_cond_t  cond_scheduler_empty = PTHREAD_COND_INITIALIZER;
-pthread_cond_t  cond_scheduler_full  = PTHREAD_COND_INITIALIZER;
-pthread_cond_t  cond_neighbor_empty  = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t mutex_scheduler      = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_neighbor       = PTHREAD_MUTEX_INITIALIZER;
-
-
 ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
 ssize_t (*_sendto) (int, const void*, size_t, int) = send;
@@ -49,7 +42,7 @@ int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
  * @args   Dummy parameter
  *
  */
-void* thread_func_scheduler (void* argv) {
+void * thread_func_scheduler (void * argv) {
 	for (char recv_data [LOT]; !panic; bzero (&recv_data, LOT)) {
 		recv_msg (sock_scheduler, recv_data);
 
@@ -60,7 +53,7 @@ void* thread_func_scheduler (void* argv) {
       query.setScheduledDate ();
 
 			int ret = recv (sock_scheduler, &query, sizeof(packet), 0);
-			if (ret != sizeof (packet)) perror ("Receiving data");
+			if (ret != sizeof (packet)) warn ("[NODE] Receiving data size=%i != %i", ret, sizeof (packet));
 
 		  query.setStartDate ();                                           
   	  bool rt = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
@@ -143,7 +136,7 @@ void * thread_func_neighbor (void* argv) {
 
 			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr, &s);
 
-			if (ret != sizeof (diskPage) && ret != -1) perror ("Receiving data");
+			if (ret != sizeof (diskPage) && ret != -1) err (EXIT_FAILURE, "[NODE] Receiving data");
 			if (ret == -1) { continue; }
 
       if (cache.is_valid (dp)) shiftedQuery++;
@@ -161,8 +154,6 @@ void * thread_func_forward (void * argv) {
 	socklen_t s = sizeof (struct sockaddr);	
 	struct sockaddr_in* addr_left = *((struct sockaddr_in**)argv + 0);
 	struct sockaddr_in* addr_right = *((struct sockaddr_in**)argv + 1);
-	assert (addr_left->sin_family == AF_INET);
-	assert (addr_right->sin_family == AF_INET);
 
 	while (!panic) {
 		if (!cache.queue_lower.empty ()) {
