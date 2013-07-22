@@ -70,11 +70,11 @@ void * thread_func_scheduler (void * argv) {
 			//! When it ask for information
 		} else if (strcmp (recv_data, "INFO") == OK) {
 			char send_data [LOT] = "", tmp [256];
-			struct timeval timeout = {1, 0};
+			//struct timeval timeout = {1, 0};
 
-			fd_set readSet;
-			FD_ZERO(&readSet);
-			FD_SET(sock_server, &readSet);
+			//fd_set readSet;
+		//	FD_ZERO(&readSet);
+		//	FD_SET(sock_server, &readSet);
 
 			//while ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet));
 

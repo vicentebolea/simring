@@ -166,7 +166,7 @@ class Node {
 			return *this;
 		}
 
-		Node& send_msg (char * in) { ::send_msg (fd, in); return *this; }
+		Node& send_msg (const char * in) { ::send_msg (fd, in); return *this; }
 		Node& close () { ::close (fd); return *this; }
 };
 

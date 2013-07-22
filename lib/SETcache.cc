@@ -136,41 +136,31 @@ diskPage SETcache::get_upp () {
 }
 
 bool SETcache::is_valid (diskPage& dp) {
-	uint64_t item (dp.index);
-
-	//! 1st test: Its inside the boundaries 
-	//if ((boundary_low < item) && (item < boundary_upp)) {
+	//uint64_t item (dp.index);
+	set<diskPage>::iterator old = cache_time->begin (); //! 0(1)
 
 	//! 2st test: Is not the farthest one 
-	set<diskPage>::iterator first = cache->begin (); //! 0(1)
-	set<diskPage>::reverse_iterator last = cache->rbegin (); //! O(1)
+	//set<diskPage>::iterator first = cache->begin (); //! 0(1)
+ //	set<diskPage>::reverse_iterator last = cache->rbegin (); //! O(1)
+ //	uint64_t lowest  = (*first).index;
+ //	uint64_t highest = (*last).index;
 
-	uint64_t lowest  = (*first).index;
-	uint64_t highest = (*last).index;
+	uint64_t oldest = (*old).time;
 
-	//	if (lowest < item && item < highest) { 
-	diskPage in = dp;
-	pthread_mutex_lock (&mutex_match);
-	cache->insert (in);
-	pthread_mutex_unlock (&mutex_match);
-	pop_farthest ();
+	//! If the new DP was more recently used than the oldest :LRU:
+	if (dp.time < oldest) {
+		diskPage in = dp;
 
-	return true;
+		pthread_mutex_lock (&mutex_match);
+		cache->insert (in);
+		cache_time->insert (in);
+		pthread_mutex_unlock (&mutex_match);
+		pop_farthest ();
 
-	// 	} else if (item < boundary_low) {
-	// 		diskPage in = dp;
-	// 		pthread_mutex_lock (&mutex_queue_low);
-	// 		queue_lower.push (in);
-	// 		pthread_mutex_unlock (&mutex_queue_low);
-	// 
-	// 	} else  {
-	// 		diskPage in = dp;
-	// 		pthread_mutex_lock (&mutex_queue_upp);
-	// 		queue_upper.push (in);
-	// 		pthread_mutex_unlock (&mutex_queue_upp);
-	// 
-	//}
-	//	return false;
+		return true;
+	}
+
+	return false;
 }
 
 void SETcache::pop_farthest () {
@@ -184,40 +174,52 @@ void SETcache::pop_farthest () {
 		uint64_t lowest  = (*first).index;
 		uint64_t highest = (*last).index;
 
-		//! POP the leftend element
-		if (((uint64_t)ema - lowest) > ((uint64_t)highest - ema)) {
+		//! If the victim belongs to the boundary of the node
+		if (boundary_low < lowest || highest < boundary_upp) {
 
-			//if (lowest < boundary_low) {
-			pthread_mutex_lock (&mutex_queue_low);
-			queue_lower.push (*first);
-			pthread_mutex_unlock (&mutex_queue_low);
-			//}
+			//! POP the leftend element
+			if (((uint64_t)ema - lowest) > ((uint64_t)highest - ema)) {
 
-			pthread_mutex_lock (&mutex_match);
-			cache->erase (lowest);
-			cache_time->erase ((*first).time);
-			pthread_mutex_unlock (&mutex_match);
+				pthread_mutex_lock (&mutex_queue_low);
+				queue_lower.push (*first);
+				pthread_mutex_unlock (&mutex_queue_low);
 
-		//! Pop the rightend element
-		} else if ((uint64_t)highest > ema) { 
+				pthread_mutex_lock (&mutex_match);
+				cache->erase (lowest);
+				cache_time->erase ((*first).time);
+				pthread_mutex_unlock (&mutex_match);
 
-			//if (highest > boundary_upp) {
-			pthread_mutex_lock (&mutex_queue_upp);
-			queue_upper.push (*last);
-			pthread_mutex_unlock (&mutex_queue_upp);
-			//}
+				//! Pop the rightend element
+			} else if ((uint64_t)highest > ema) { 
 
-			pthread_mutex_lock (&mutex_match);
-			cache->erase (highest);
-			cache_time->erase ((*last).time);
-			pthread_mutex_unlock (&mutex_match);
+				pthread_mutex_lock (&mutex_queue_upp);
+				queue_upper.push (*last);
+				pthread_mutex_unlock (&mutex_queue_upp);
 
-		//! Otherwise pop the oldest element :LRU:
+				pthread_mutex_lock (&mutex_match);
+				cache->erase (highest);
+				cache_time->erase ((*last).time);
+				pthread_mutex_unlock (&mutex_match);
+			}
+
+			//! Otherwise pop the oldest element :LRU:
 		} else {
 			set<diskPage>::iterator oldest = cache->begin();
 			uint64_t oldest_time = (*oldest).time;
 			uint64_t oldest_item = (*oldest).index;
 
+			//! Depends of the position
+			if (oldest_item < ema) {
+				pthread_mutex_lock (&mutex_queue_low);
+				queue_lower.push (*oldest);
+				pthread_mutex_unlock (&mutex_queue_low);
+
+			} else {
+				pthread_mutex_lock (&mutex_queue_upp);
+				queue_upper.push (*oldest);
+				pthread_mutex_unlock (&mutex_queue_upp);
+
+			}
 			pthread_mutex_lock (&mutex_match);
 
 			cache_time->erase (oldest_time);
@@ -225,7 +227,6 @@ void SETcache::pop_farthest () {
 
 			pthread_mutex_unlock (&mutex_queue_upp);
 		}
-
 	}
 }
 
@@ -243,14 +244,17 @@ void SETcache::update (double low, double upp) {
 
 		//! Fill lower queue [ O(m1) ]
 		pthread_mutex_lock (&mutex_queue_low);
+
 		for (it = cache->begin (); it != low_i; it++) {
 			queue_lower.push (*it);
 		}
+
 		pthread_mutex_unlock (&mutex_queue_low);
 
 		pthread_mutex_lock (&mutex_match);
 		cache->erase (cache->begin (), low_i);
 		pthread_mutex_unlock (&mutex_match);
+
 	}  
 
 	pthread_mutex_lock (&mutex_match);
