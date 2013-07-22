@@ -1,4 +1,4 @@
-CXXFLAGS = -Wall -g -I.
+CXXFLAGS += -I.
 sources := $(wildcard *.cc) 
 objects := $(patsubst %.cc, %.o, $(sources))
 .SUFFIXES: .o .cc

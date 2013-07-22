@@ -12,7 +12,7 @@
 CXX = g++
 MAKE = make
 AR = ar
-CXXFLAGS = -I./lib/ -L./lib/ -luniDQP -Wall -g 
+CXXFLAGS = -I./lib/ -L./lib/ -luniDQP -Wall -g -std=gnu++98
 OPTIONS = -D__STDC_FORMAT_MACROS
 
 #Experiments parameters
@@ -25,7 +25,7 @@ OPTIONS += 	-DLOT=1024
 
 POLICY = -DDATA_MIGRATION
 
-export POLICY CXX MAKE AR OPTIONS
+export POLICY CXX CXXFLAGS MAKE AR OPTIONS
 .PHONY: lib dist node docs
 
 all: lib src

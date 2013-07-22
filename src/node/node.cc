@@ -1,9 +1,9 @@
 /*
- * @file This file contains the source code of the application 
- *       which will run in each server 
- *
- *
- */
+	* @file This file contains the source code of the application 
+	*       which will run in each server 
+	*
+	*
+	*/
 #include <node.hh>
 #include <simring.hh>
 #include <queue>
@@ -37,11 +37,11 @@ int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
 
 
 /*
- * @brief  Thread function to receive queries from the scheduler.
- *         This function can be seen as one of the producers.
- * @args   Dummy parameter
- *
- */
+	* @brief  Thread function to receive queries from the scheduler.
+	*         This function can be seen as one of the producers.
+	* @args   Dummy parameter
+	*
+	*/
 void * thread_func_scheduler (void * argv) {
 	for (char recv_data [LOT]; !panic; bzero (&recv_data, LOT)) {
 		recv_msg (sock_scheduler, recv_data);
@@ -50,33 +50,33 @@ void * thread_func_scheduler (void * argv) {
 		if (strcmp (recv_data, "QUERY") == OK) {
 			Query query;
 
-      query.setScheduledDate ();
+			query.setScheduledDate ();
 
 			int ret = recv (sock_scheduler, &query, sizeof(packet), 0);
 			if (ret != sizeof (packet)) warn ("[NODE] Receiving data size=%i != %i", ret, sizeof (packet));
 
-		  query.setStartDate ();                                           
-  	  bool rt = cache.match (query.get_point (), query.EMA, query.low_b, query.upp_b);
-		  query.setFinishedDate ();                                        
+			query.setStartDate ();                                           
+			bool rt = cache.match (query);
+			query.setFinishedDate ();                                        
 
-		  if (rt == true) hitCount++; else missCount++;
+			if (rt == true) hitCount++; else missCount++;
 
-		  queryProcessed++;                                                
+			queryProcessed++;                                                
 			queryRecieves++;
-      
-		  TotalExecTime += query.getExecTime ();                            
-		  TotalWaitTime += query.getWaitTime ();                           
 
-	  //! When it ask for information
+			TotalExecTime += query.getExecTime ();                            
+			TotalWaitTime += query.getWaitTime ();                           
+
+			//! When it ask for information
 		} else if (strcmp (recv_data, "INFO") == OK) {
 			char send_data [LOT] = "", tmp [256];
-      struct timeval timeout = {1, 0};
+			struct timeval timeout = {1, 0};
 
-      fd_set readSet;
-      FD_ZERO(&readSet);
-      FD_SET(sock_server, &readSet);
-      
-      //while ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet));
+			fd_set readSet;
+			FD_ZERO(&readSet);
+			FD_SET(sock_server, &readSet);
+
+			//while ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet));
 
 			sprintf (tmp, "CacheHit=%"         PRIu64 "\n", hitCount);
 			strncat (send_data, tmp, 256);
@@ -97,14 +97,14 @@ void * thread_func_scheduler (void * argv) {
 
 			_send (sock_scheduler, send_data, LOT, 0);
 
-	  //! In case that we need to finish the execution 
+			//! In case that we need to finish the execution 
 		} else if (strcmp (recv_data, "QUIT") == OK) {
 			panic = true;
-		  sleep (1);
+			sleep (1);
 
 		} else {
-      char host_name [256];
-      gethostname (host_name, 256);
+			char host_name [256];
+			gethostname (host_name, 256);
 			warn ("Unknown message received [ID: %s] [MSG: %s]", host_name, recv_data);
 			panic = true;
 		}
@@ -114,23 +114,23 @@ void * thread_func_scheduler (void * argv) {
 
 
 /*
- * @brief  Thread function to receive queries from the scheduler.
- *         This function can be seen as one of the producers.
- * @args   Dummy parameter
- *
- */
+	* @brief  Thread function to receive queries from the scheduler.
+	*         This function can be seen as one of the producers.
+	* @args   Dummy parameter
+	*
+	*/
 void * thread_func_neighbor (void* argv) {
 	socklen_t s = sizeof (sockaddr);
-  struct sockaddr_in* addr = (struct sockaddr_in*)argv;
-  assert (addr->sin_family == AF_INET);
+	struct sockaddr_in* addr = (struct sockaddr_in*)argv;
+	assert (addr->sin_family == AF_INET);
 
 	while (!panic) {
 		diskPage dp;
-    struct timeval timeout = {1, 0};
+		struct timeval timeout = {1, 0};
 
-    fd_set readSet;
-    FD_ZERO (&readSet);
-    FD_SET (sock_server, &readSet);
+		fd_set readSet;
+		FD_ZERO (&readSet);
+		FD_SET (sock_server, &readSet);
 
 		if ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet)) {
 
@@ -139,17 +139,17 @@ void * thread_func_neighbor (void* argv) {
 			if (ret != sizeof (diskPage) && ret != -1) err (EXIT_FAILURE, "[NODE] Receiving data");
 			if (ret == -1) { continue; }
 
-      if (cache.is_valid (dp)) shiftedQuery++;
+			if (cache.is_valid (dp)) shiftedQuery++;
 		}
 	}
 	pthread_exit (EXIT_SUCCESS);
 }
 
 /*
- * @brief
- * @param 
- * @param 
- */
+	* @brief
+	* @param 
+	* @param 
+	*/
 void * thread_func_forward (void * argv) {
 	socklen_t s = sizeof (struct sockaddr);	
 	struct sockaddr_in* addr_left = *((struct sockaddr_in**)argv + 0);
@@ -178,10 +178,10 @@ void * thread_func_forward (void * argv) {
 //---------------------------------------------------------------------//
 
 /*
- * @brief
- * @param 
- * @param 
- */
+	* @brief
+	* @param 
+	* @param 
+	*/
 void setup_server_peer (int port, int* sock, sockaddr_in* addr) {
 	socklen_t s = sizeof (sockaddr);
 	EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
@@ -195,10 +195,10 @@ void setup_server_peer (int port, int* sock, sockaddr_in* addr) {
 }
 
 /*
- * @brief
- * @param 
- * @param 
- */
+	* @brief
+	* @param 
+	* @param 
+	*/
 void setup_client_peer (const int port, const char* host, int* sock, sockaddr_in* addr) {
 
 	EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
@@ -211,10 +211,10 @@ void setup_client_peer (const int port, const char* host, int* sock, sockaddr_in
 
 
 /*
- * @brief
- * @param 
- * @param 
- */
+	* @brief
+	* @param 
+	* @param 
+	*/
 void setup_client_scheduler (int port, const char* host, int* sock) {
 	struct sockaddr_in server_addr;  
 	socklen_t s = sizeof (sockaddr);
@@ -230,10 +230,10 @@ void setup_client_scheduler (int port, const char* host, int* sock) {
 }
 
 /*
- * @brief parse the command line options
- * @param number or args
- * @param array of args 
- */
+	* @brief parse the command line options
+	* @param number or args
+	* @param array of args 
+	*/
 void parse_args (int argc, const char** argv, Arguments* args) {
 	int c = 0;  
 	do {
