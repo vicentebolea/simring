@@ -12,7 +12,7 @@
 CXX = g++
 MAKE = make
 AR = ar
-CXXFLAGS = -I./lib/ -L./lib/ -luniDQP -Wall -g -std=gnu++98
+CXXFLAGS = -I./lib/ -L./lib/ -Wall -g -std=gnu++98
 OPTIONS = -D__STDC_FORMAT_MACROS
 
 #Experiments parameters
