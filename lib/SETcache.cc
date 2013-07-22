@@ -137,18 +137,27 @@ diskPage SETcache::get_upp () {
 
 bool SETcache::is_valid (diskPage& dp) {
 	//uint64_t item (dp.index);
-	set<diskPage>::iterator old = cache_time->begin (); //! 0(1)
+	uint64_t max_dist;
 
 	//! 2st test: Is not the farthest one 
-	//set<diskPage>::iterator first = cache->begin (); //! 0(1)
- //	set<diskPage>::reverse_iterator last = cache->rbegin (); //! O(1)
- //	uint64_t lowest  = (*first).index;
- //	uint64_t highest = (*last).index;
+	set<diskPage>::iterator first = cache->begin (); //! 0(1)
+ set<diskPage>::reverse_iterator last = cache->rbegin (); //! O(1)
+	set<diskPage>::iterator old = cache_time->begin (); //! 0(1)
 
+ uint64_t lowest  = (*first).index;
+ uint64_t highest = (*last).index;
 	uint64_t oldest = (*old).time;
 
+ if ((uint64_t)ema - lowest > (uint64_t)highest - ema)
+		max_dist = labs ((uint64_t)ema - lowest);
+
+	else 
+		max_dist = labs ((uint64_t)highest - ema);
+
+
+
 	//! If the new DP was more recently used than the oldest :LRU:
-	if (dp.time < oldest) {
+	if (dp.time < oldest || max_dist > (labs((uint64_t)dp.index - ema))) {
 		diskPage in = dp;
 
 		pthread_mutex_lock (&mutex_match);
