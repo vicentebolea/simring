@@ -184,11 +184,13 @@ class diskPage {
 
 		diskPage (const diskPage& that) {
 			index = that.index;
+			time = that.time;
 			memcpy (chunk, that.chunk, DPSIZE);
 		}
 
 		diskPage& operator= (const diskPage& that) {
 			index = that.index;
+			time = that.time;
 			memcpy (chunk, that.chunk, DPSIZE);
 			return *this;
 		}

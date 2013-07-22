@@ -186,7 +186,7 @@ void SETcache::pop_farthest () {
 
 				pthread_mutex_lock (&mutex_match);
 				cache->erase (lowest);
-				cache_time->erase ((*first).time);
+				cache_time->erase (*first);
 				pthread_mutex_unlock (&mutex_match);
 
 				//! Pop the rightend element
@@ -198,7 +198,7 @@ void SETcache::pop_farthest () {
 
 				pthread_mutex_lock (&mutex_match);
 				cache->erase (highest);
-				cache_time->erase ((*last).time);
+				cache_time->erase (*last);
 				pthread_mutex_unlock (&mutex_match);
 			}
 
@@ -225,7 +225,7 @@ void SETcache::pop_farthest () {
 			cache_time->erase (oldest_time);
 			cache->erase (oldest_item);
 
-			pthread_mutex_unlock (&mutex_queue_upp);
+			pthread_mutex_unlock (&mutex_match);
 		}
 	}
 }
