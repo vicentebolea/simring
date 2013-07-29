@@ -285,3 +285,25 @@ void SETcache::update (double low, double upp) {
 		pthread_mutex_unlock (&mutex_match);
 	}
 }
+
+diskPage SETcache::get_diskPage (uint64_t idx) {
+	diskPage a (idx);
+ set<diskPage>::iterator victim = cache->find (a);
+
+ if (victim != cache->end ()) {  //! If it is found O(log n)
+		return *victim;
+
+	} else {
+
+		long currentChunk = (a.index * DPSIZE); //! read a block from a file
+		ifstream file (path, ios::in | ios::binary);
+
+		if (!file.good ()) { perror ("FILE NOT FOUND"); exit (EXIT_FAILURE); } 
+
+		file.seekg (currentChunk, ios_base::beg);
+		file.read (a.chunk, DPSIZE);
+		file.close (); 
+
+		return a;
+	}
+}

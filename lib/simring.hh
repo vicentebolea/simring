@@ -46,6 +46,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <ifaddrs.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <netinet/in.h>
@@ -226,6 +227,7 @@ class SETcache {
 		int _max, policy;
 		uint64_t count;
 		double boundary_low, boundary_upp, ema;
+
 		pthread_mutex_t mutex_match     ;
 		pthread_mutex_t mutex_queue_low ;
 		pthread_mutex_t mutex_queue_upp ;
@@ -241,6 +243,7 @@ class SETcache {
 		bool match (Query&);
 		bool is_valid (diskPage&);
 		void update (double low, double upp);
+  diskPage get_diskPage (uint64_t);
 
 		queue<diskPage> queue_lower;
 		queue<diskPage> queue_upper;
@@ -249,25 +252,6 @@ class SETcache {
 		diskPage get_upp ();
 
 		friend ostream& operator<< (ostream&, SETcache&);
-};
-
-class LRUcache {
-	protected:
-		lru_map<uint64_t, diskPage>* cache;
-		set<uint64_t> bst;
-		char path [256];
-
-		void insert (uint64_t);
-
-	public:
-		LRUcache (int);
-
-		void setDataFile (char*);
-		void match (uint64_t , uint64_t*, uint64_t*);
-		void update (double, double);
-
-		queue<diskPage> queue_lower;
-		queue<diskPage> queue_upper;
 };
 
 #endif
