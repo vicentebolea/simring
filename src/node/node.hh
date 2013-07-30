@@ -67,6 +67,7 @@ struct Arguments {
   int port;
 }; 
 
+void* thread_func_dht       (void*) WEAK;
 void* thread_func_scheduler (void*) WEAK;
 void* thread_func_neighbor  (void*) WEAK;
 void* thread_func_forward   (void*) WEAK;

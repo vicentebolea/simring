@@ -8,8 +8,8 @@
 #include <simring.hh>
 #include <queue>
 #include <err.h>
-#define CACHESIZE 1000
 
+#define CACHESIZE 1000
 #define SCH_PORT  20000
 #define PEER_PORT 20001
 #define DHT_PORT  20002
@@ -53,6 +53,8 @@ uint64_t TotalExecTime = 0;
 uint64_t TotalWaitTime = 0;
 uint64_t shiftedQuery = 0;
 uint64_t SentShiftedQuery = 0;
+uint64_t requestedQuerySent = 0;
+uint64_t requestedQueryReceived = 0;
 
 ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
@@ -70,17 +72,15 @@ int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
  */
 char* get_ip (const char* interface) {
  static char if_ip [INET_ADDRSTRLEN];
- struct ifaddrs * ifAddrStruct = NULL;
- struct ifaddrs * ifa = NULL;
+ struct ifaddrs *ifAddrStruct = NULL, *ifa = NULL;
 
  getifaddrs (&ifAddrStruct);
 
- for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
-  if (strcmp (ifa->ifa_name, interface) == 0) {
-   void* tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-   inet_ntop (AF_INET, tmpAddrPtr, if_ip, INET_ADDRSTRLEN);
-  }
- }
+ for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
+  if (strcmp (ifa->ifa_name, interface) == 0)
+   inet_ntop (AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, 
+              if_ip, INET_ADDRSTRLEN);
+
  if (ifAddrStruct != NULL) freeifaddrs (ifAddrStruct);
  
  return if_ip;
@@ -99,8 +99,9 @@ void dht_request (uint64_t index) {
  int server_no = index / 100000;
 
  if (server_no == local_no) return; 
- 
  sendto (DHT_sock, &index, sizeof (index), 0,(sockaddr*)&network_addr [server_no], s);
+
+ requestedQuerySent++; 
 }
 
 /*
@@ -129,6 +130,8 @@ void* thread_func_dht (void* arg) {
  int sock_server_dht;
  struct sockaddr_in addr;
  socklen_t s = sizeof (addr);
+
+ dht_init ();                          //! Init DHT mockup system
 
  //! Setup the addr of the server
  sock_server_dht = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -163,6 +166,8 @@ void* thread_func_dht (void* arg) {
     //! Send to the ip which is asking for it
     client_addr.sin_port = htons (PEER_PORT);
     sendto (DHT_sock, &requested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
+
+    requestedQueryReceived++;
    }
   }
  }
@@ -190,11 +195,15 @@ void * thread_func_scheduler (void * argv) {
    query.setScheduledDate ();
 
    int ret = recv (sock_scheduler, &query, sizeof(packet), 0);
-   if (ret != sizeof (packet)) warn ("[NODE] Receiving data size=%i != %i", ret, sizeof (packet));
+   if (ret != sizeof (packet)) 
+    warn ("[NODE] Receiving data size=%i != %i", ret, sizeof (packet));
 
    query.setStartDate ();                                           
    bool rt = cache.match (query);
    query.setFinishedDate ();                                        
+
+   if (rt == false && !dht_check (query.get_point ()))  
+    dht_request (query.get_point ());
 
    if (rt == true) hitCount++; else missCount++;
 
@@ -324,7 +333,7 @@ void setup_server_peer (int port, int* sock, sockaddr_in* addr) {
  EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
  addr->sin_family      = AF_INET;
- addr->sin_port        = htons (port + 1);
+ addr->sin_port        = htons (PEER_PORT);
  addr->sin_addr.s_addr = htonl (INADDR_ANY);
  bzero (&(addr->sin_zero), 8);
 
@@ -341,7 +350,7 @@ void setup_client_peer (const int port, const char* host, int* sock, sockaddr_in
  EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
  addr->sin_family      = AF_INET;
- addr->sin_port        = htons (port + 1);
+ addr->sin_port        = htons (PEER_PORT);
  addr->sin_addr.s_addr = inet_addr (host);
  bzero (&(addr->sin_zero), 8);
 }
@@ -399,4 +408,5 @@ void close_all () {
  close (sock_left);
  close (sock_right);
  close (sock_server);
+ close (DHT_sock);
 }

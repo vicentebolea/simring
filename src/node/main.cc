@@ -10,7 +10,7 @@
 
 int main (int argc, const char** argv) {
  struct sockaddr_in addr_left, addr_right, addr_server;
- pthread_t thread_neighbor, thread_scheduler, thread_forward;
+ pthread_t thread_neighbor, thread_scheduler, thread_forward, thread_dht;
  struct Arguments args;
  
  parse_args (argc, argv, &args);
@@ -28,6 +28,7 @@ int main (int argc, const char** argv) {
 #ifdef DATA_MIGRATION
  pthread_create (&thread_neighbor,  NULL, thread_func_neighbor, &addr_server);
  pthread_create (&thread_forward,   NULL, thread_func_forward, addr_vec);
+ pthread_create (&thread_dht,   NULL, thread_func_dht, NULL);
 #endif
 
  pthread_join (thread_scheduler, NULL);
@@ -35,6 +36,7 @@ int main (int argc, const char** argv) {
 #ifdef DATA_MIGRATION
  pthread_join (thread_forward,  NULL);
  pthread_join (thread_neighbor,  NULL);
+ pthread_join (thread_dht,  NULL);
 #endif
 
  close_all ();
