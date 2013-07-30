@@ -99,6 +99,7 @@ void dht_request (uint64_t index) {
  int server_no = index / 100000;
 
  if (server_no == local_no) return; 
+ cout << "Requesting data" <<endl;
  sendto (DHT_sock, &index, sizeof (index), 0,(sockaddr*)&network_addr [server_no], s);
 
  requestedQuerySent++; 
@@ -155,6 +156,7 @@ void* thread_func_dht (void* arg) {
   if ((select(sock_server_dht+1, &readSet, NULL, NULL, &timeout) >= 0) &&
        FD_ISSET(sock_server_dht, &readSet)) 
   {
+   cout << "Recieved data from peer" << endl;
    //! Read a new query
    ssize_t ret = recvfrom (sock_server_dht, &index, sizeof (index), 0, (sockaddr*)&client_addr, &s);
 
