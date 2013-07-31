@@ -99,7 +99,7 @@ void dht_request (uint64_t index) {
  int server_no = index / 100000;
 
  if (server_no == local_no) return; 
- cout << "Requesting data" <<endl;
+ cout << "Server " << local_ip << " Requesting data to server " << server_no << "." << endl;
  sendto (DHT_sock, &index, sizeof (index), 0,(sockaddr*)&network_addr [server_no], s);
 
  requestedQuerySent++; 
@@ -156,7 +156,6 @@ void* thread_func_dht (void* arg) {
   if ((select(sock_server_dht+1, &readSet, NULL, NULL, &timeout) >= 0) &&
        FD_ISSET(sock_server_dht, &readSet)) 
   {
-   cout << "Recieved data from peer" << endl;
    //! Read a new query
    ssize_t ret = recvfrom (sock_server_dht, &index, sizeof (index), 0, (sockaddr*)&client_addr, &s);
 
@@ -167,6 +166,11 @@ void* thread_func_dht (void* arg) {
 
     //! Send to the ip which is asking for it
     client_addr.sin_port = htons (PEER_PORT);
+
+    char address [INET_ADDRSTRLEN];
+    inet_ntop (AF_INET, &client_addr.sin_addr, address, INET_ADDRSTRLEN);
+    cout << "Server " << local_ip << " Received data from server " << address << "." << endl;
+
     sendto (DHT_sock, &requested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
 
     requestedQueryReceived++;
@@ -196,18 +200,18 @@ void * thread_func_scheduler (void * argv) {
 
    query.setScheduledDate ();
 
-   int ret = recv (sock_scheduler, &query, sizeof(packet), 0);
-   if (ret != sizeof (packet)) 
-    warn ("[NODE] Receiving data size=%i != %i", ret, sizeof (packet));
+   int bytes_sent = recv (sock_scheduler, &query, sizeof(packet), 0);
+   if (bytes_sent != sizeof (packet)) 
+    warn ("[NODE] Receiving data size=%i != %i", bytes_sent, sizeof (packet));
 
    query.setStartDate ();                                           
-   bool rt = cache.match (query);
+   bool found = cache.match (query);
    query.setFinishedDate ();                                        
 
-   if (rt == false && !dht_check (query.get_point ()))  
+   if (!found && !dht_check (query.get_point ()))  
     dht_request (query.get_point ());
 
-   if (rt == true) hitCount++; else missCount++;
+   if (found) hitCount++; else missCount++;
 
    queryProcessed++;                                                
    queryRecieves++;
