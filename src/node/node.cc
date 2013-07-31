@@ -77,7 +77,7 @@ char* get_ip (const char* interface) {
  getifaddrs (&ifAddrStruct);
 
  for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
-  if (strcmp (ifa->ifa_name, interface) == 0)
+  if (ifa->ifa_addr->sa_family == AF_INET && strcmp (ifa->ifa_name, interface) == 0)
    inet_ntop (AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, 
               if_ip, INET_ADDRSTRLEN);
 
