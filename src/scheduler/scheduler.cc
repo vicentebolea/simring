@@ -215,7 +215,9 @@ int main (int argc, char** argv) {
     victim.set_upp (victim.get_EMA() + ((backend [selected + 1]->get_EMA () - victim.get_EMA ()) / 2.0));
   }
 
-  victim .update_EMA (point) .set_time (cnt) .send (point);
+  victim .update_EMA (point) .set_time (cnt);
+  if (cnt % 200 == 0) victim.send (point, true);
+  else                victim.send (point);
 
   if ((cnt + 1) % step == 0) {
    sleep (1);

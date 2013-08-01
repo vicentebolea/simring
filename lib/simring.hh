@@ -86,6 +86,7 @@ class packet {
 	public:
 		uint64_t point, time; 
 		double EMA, low_b, upp_b;
+  bool trace;
 
 		packet ();
 		packet (uint64_t);
@@ -129,39 +130,35 @@ class Node {
 		Node (double a) : EMA (.0), low_b (.0), upp_b (.0), alpha (a) {} 
 		Node (double a, double e) : EMA (e), low_b (.0), upp_b (.0) , alpha (a) {} 
 
-		Node& set_fd (int f) { fd = f; return *this;}
-		Node& set_EMA (double a) { EMA= a; return *this;}
-		Node& set_alpha (double a) { alpha = a; return *this;}
-		Node& set_low (double l) { low_b = l; return *this;}
-		Node& set_upp (double u) { upp_b = u; return *this;} 
-		Node& set_time (uint64_t u) { time = u; return *this;} 
+		Node& set_fd (int f)        { fd = f;    return *this;}
+		Node& set_EMA (double a)    { EMA= a;    return *this;}
+		Node& set_alpha (double a)  { alpha = a; return *this;}
+		Node& set_low (double l)    { low_b = l; return *this;}
+		Node& set_upp (double u)    { upp_b = u; return *this;} 
+		Node& set_time (uint64_t u) { time = u;  return *this;} 
 
 		int get_fd () { return fd; }
 		double get_low () { return low_b; }
 		double get_upp () { return upp_b; } 
 		double get_EMA () const { return EMA; }
 
-		double get_distance (packet& p) { 
-			return fabs (EMA - p.get_point ());
-		}
-
-		double get_distance (uint64_t p) {
-			return fabs (EMA - p); 
-		}
+		double get_distance (packet& p) { return fabs (EMA - p.get_point ()); }
+		double get_distance (uint64_t p) { return fabs (EMA - p); }
 
 		Node& update_EMA (double point)  { EMA += alpha * (point - EMA); return *this; } 
 
 		Node& accept (int sock) {
-			socklen_t sin_size = sizeof(struct sockaddr_in);
+			socklen_t sin_size = sizeof (struct sockaddr_in);
 			sockaddr_in addr;
 			fd = ::accept (sock, (struct sockaddr *)&addr, &sin_size);
 			printf ("[SCHEDULER] Backend server linked (addr = %s).\n", inet_ntoa(addr.sin_addr)); 
 			return *this;
 		}
 
-		Node& send (uint64_t point) {
+		Node& send (uint64_t point, bool trace = false) {
 			packet toSend (point, EMA, low_b, upp_b);
 			toSend.time = time;
+   toSend.trace = trace;
 			::send_msg (fd, "QUERY");
 			::send (fd, &toSend, sizeof (packet), 0);
 			return *this;

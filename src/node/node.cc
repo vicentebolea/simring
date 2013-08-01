@@ -99,7 +99,6 @@ void dht_request (uint64_t index) {
  int server_no = index / 100000;
 
  if (server_no == local_no) return; 
- cout << "Server " << local_ip << " Requesting data to server " << server_no << "." << endl;
  sendto (DHT_sock, &index, sizeof (index), 0,(sockaddr*)&network_addr [server_no], s);
 
  requestedQuerySent++; 
@@ -202,14 +201,19 @@ void * thread_func_scheduler (void * argv) {
 
    int bytes_sent = recv (sock_scheduler, &query, sizeof(packet), 0);
    if (bytes_sent != sizeof (packet)) 
-    warn ("[NODE] Receiving data size=%i != %i", bytes_sent, sizeof (packet));
+    warn ("WARN [NODE: %s] Receiving data size", local_ip);
+
+   if (query.trace) printf ("DEBUG [NODE: %s] query arrived from schd \n", local_ip);
 
    query.setStartDate ();                                           
    bool found = cache.match (query);
    query.setFinishedDate ();                                        
 
-   if (!found && !dht_check (query.get_point ()))  
+   if (!found && !dht_check (query.get_point ())) {
     dht_request (query.get_point ());
+    if (query.trace) 
+      printf ("DEBUG [NODE: %s] Requesting data to [%s]\n", local_ip, "undetermine");
+   }
 
    if (found) hitCount++; else missCount++;
 
