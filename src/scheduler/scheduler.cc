@@ -94,7 +94,7 @@ void print_header (void) {
    "%15.15s|%15.15s|%15.15s|\n", 
 
    "Queries", "Hits", "Miss", "recvShiftedQuery", "SentShiftedQuery",
-   "RequestedData", "RecievedData", "AveExecTime", "AveWaitTime"
+   "RequestedData", "ReceivedData", "AveExecTime", "AveWaitTime"
  );
  RULER ();
 }
@@ -105,11 +105,10 @@ void print_header (void) {
 void print_out (void) {
  printf (
    "|%15" PRIu64 "|%15" PRIu64 "|%15" PRIu64 "|%15" PRIu64 "|%15" PRIu64
-   "|%15.5LE|%15.5LE|%15.5LE|%15.5LE|\n",
+   "|%15" PRIu64 "|%15" PRIu64 "|%15.5LE|%15.5LE|\n",
 
     numQuery, TotalCacheHit, TotalCacheMiss, shiftedQuery, SentShiftedQuery,
-   ((long double)TotalExecTime) / 1000000.0, 
-   ((long double)MaxExecTime)   / 1000000.0,
+    RequestedData, ReceivedData,
    ((long double)AveExecTime)   / 1000000.0,
    ((long double)AveWaitTime)   / 1000000.0
  );
