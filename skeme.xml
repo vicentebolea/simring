@@ -1,0 +1,9 @@
+<!-- <? xml version="1.0" enconding="UTF-8" ?> -->
+<query>
+ <index>12313</index>
+ <boundary>
+  <low>10000</low>
+  <upp>20000</upp>
+ </boundary>
+ <ema>15000</ema>
+</query>

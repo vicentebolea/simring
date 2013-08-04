@@ -11,6 +11,12 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <stdint.h>
 #include <error.h>
 #include <simring.hh>
 
@@ -67,6 +73,7 @@ struct Arguments {
   int port;
 }; 
 
+void* thread_func_dht       (void*) WEAK;
 void* thread_func_scheduler (void*) WEAK;
 void* thread_func_neighbor  (void*) WEAK;
 void* thread_func_forward   (void*) WEAK;

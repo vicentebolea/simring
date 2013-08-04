@@ -4,6 +4,10 @@ bin/node
 bin/scheduler_bdema
 bin/scheduler_hash
 
+src/common/libsimring.a
+src/node/node
+src/scheduler/scheduler
+
 # Other files and folders
 *.o
 data/
