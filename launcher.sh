@@ -23,7 +23,7 @@ function killapps {
 
 trap killapps SIGINT SIGTERM
 #raven01 gdbserver :29999
-/home/vicente/simring/src/scheduler/scheduler -p 19999 -n 10 -q 1000000 -s 10000 < /home/vicente/simring/src/scheduler/input1.dat&
+/home/vicente/simring/src/scheduler/scheduler -p 19999 -n 10 -q 1000000 -s 10000 < /home/vicente/simring/input/normal_20000_16_10x_permutated.dat
 
 ssh raven01 /home/vicente/simring/src/node/node -h 10.20.12.170 -p 19999 -d /scratch/youngmoon01/garbage2.bin -l nothing     -r 192.168.1.2 & sleep 1
 ssh raven02 /home/vicente/simring/src/node/node -h 10.20.12.170 -p 19999 -d /scratch/youngmoon01/garbage2.bin -l 192.168.1.1 -r 192.168.1.3 & sleep 1

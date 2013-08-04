@@ -12,10 +12,10 @@
 
 class Header {
  public:
-		uint64_t point; 
-		double EMA, low_b, upp_b;
+  uint64_t point; 
+  double EMA, low_b, upp_b;
   bool trace;
-  
+
   Header () { trace = false; }
   Header& operator= (const Header& that) {
    point = that.point;
@@ -37,39 +37,39 @@ class Header {
   double   get_EMA   () { return EMA; }
   uint64_t get_point () { return point; }
 
-		bool operator== (const Header& that) {
-			return point == that.point ? true: false;
-		}
+  bool operator== (const Header& that) {
+   return point == that.point ? true: false;
+  }
 };
 
 
 class diskPage : public Header {
-	public:
-		uint64_t time;
-		char chunk [DPSIZE];
+ public:
+  uint64_t time;
+  char chunk [DPSIZE];
 
-		diskPage () : Header () {}
-		diskPage (const uint64_t i) : Header () { point = i; }
+  diskPage () : Header () {}
+  diskPage (const uint64_t i) : Header () { point = i; }
 
-		diskPage (const diskPage& that) : Header (that) {
-			time = that.time;
-			memcpy (chunk, that.chunk, DPSIZE);
-		}
+  diskPage (const diskPage& that) : Header (that) {
+   time = that.time;
+   memcpy (chunk, that.chunk, DPSIZE);
+  }
 
-		diskPage& operator= (const diskPage& that) {
+  diskPage& operator= (const diskPage& that) {
    Header::operator= (that);
-			time = that.time;
-			memcpy (chunk, that.chunk, DPSIZE);
-			return *this;
-		}
+   time = that.time;
+   memcpy (chunk, that.chunk, DPSIZE);
+   return *this;
+  }
 
-		static bool less_than (const diskPage& a, const diskPage& b) {
-			return (a.point < b.point);
-		}
+  static bool less_than (const diskPage& a, const diskPage& b) {
+   return (a.point < b.point);
+  }
 
-		static bool less_than_lru (const diskPage& a, const diskPage& b) {
-			return (a.time < b.time);
-		}
+  static bool less_than_lru (const diskPage& a, const diskPage& b) {
+   return (a.time < b.time);
+  }
 };
 
 
@@ -77,15 +77,15 @@ class diskPage : public Header {
  * will be send by sockets
  */
 class Packet: public Header {
-	public:
-		uint64_t time; 
-  
+ public:
+  uint64_t time; 
+
   using Header::set_point;
 
-		Packet () : Header () {} 
-		Packet (uint64_t p) : Header () { point = p; }	
-		Packet (const Packet& that) : Header (that), time (that.time) {}
-		Packet& operator= (const Packet& that) {
+  Packet () : Header () {} 
+  Packet (uint64_t p) : Header () { point = p; }	
+  Packet (const Packet& that) : Header (that), time (that.time) {}
+  Packet& operator= (const Packet& that) {
    Header::operator= (that);
    time = that.time;
    return *this;
@@ -95,25 +95,25 @@ class Packet: public Header {
 };
 
 class Query: public Packet {
-	protected:
-		struct timeval scheduledDate;
-		struct timeval startDate;
-		struct timeval finishedDate;
+ protected:
+  struct timeval scheduledDate;
+  struct timeval startDate;
+  struct timeval finishedDate;
 
-	public:
-		//constructor & destructor
-		Query (): Packet() {}
-		Query (const Packet&);
-		Query (const Query&);
+ public:
+  //constructor & destructor
+  Query (): Packet() {}
+  Query (const Packet&);
+  Query (const Query&);
 
-		//setter
-		void setScheduledDate ();
-		void setStartDate ();
-		void setFinishedDate ();
+  //setter
+  void setScheduledDate ();
+  void setStartDate ();
+  void setFinishedDate ();
 
-		//getter
-		uint64_t getWaitTime ();
-		uint64_t getExecTime ();
+  //getter
+  uint64_t getWaitTime ();
+  uint64_t getExecTime ();
 };
 
 #endif
