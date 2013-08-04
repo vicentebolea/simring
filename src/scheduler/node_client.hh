@@ -3,9 +3,31 @@
 
 #include <utils.hh>
 #include <packets.hh>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <time.h>
+#include <math.h>
+#include <errno.h>
+#include <assert.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <cfloat>
+#include <string.h>
+#include <stdlib.h>
+#include <iostream>
 
 class Node { 
 	protected:
+  //Packet next_packet;
+
 		double EMA, low_b, upp_b, alpha;
 		int fd;
 		uint64_t time;

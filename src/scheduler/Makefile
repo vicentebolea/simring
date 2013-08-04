@@ -1,6 +1,6 @@
 INCLUDE := -I./../../lib/ -I./
 INCLUDE += -I./../common/
-LIBDIR  := -L./../../lib/
+#LIBDIR  := -L./../../lib/
 LIBDIR  += -L./../common/
 LIB     := -l simring
 

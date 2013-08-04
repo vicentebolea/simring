@@ -28,10 +28,10 @@ void receive_all (void) {
 	char recv_data [LOT];
 
 	TotalCacheHit = 0, TotalCacheMiss = 0,  numQuery = 0;
-  TotalExecTime = 0, TotalWaitTime = 0; 
-  AveExecTime = 0, AveWaitTime = 0; 
-  MaxExecTime = 0, MaxWaitTime = 0; 
-  SentShiftedQuery = 0, shiftedQuery = 0;
+ TotalExecTime = 0, TotalWaitTime = 0; 
+ AveExecTime = 0, AveWaitTime = 0; 
+ MaxExecTime = 0, MaxWaitTime = 0; 
+ SentShiftedQuery = 0, shiftedQuery = 0;
 
 	for (int i = 0; i < nservers; i++) backend[i]->send_msg ("INFO");  
 	for (int i = 0; i < nservers; i++) {  
