@@ -66,8 +66,8 @@ uint64_t TotalExecTime = 0;
 uint64_t TotalWaitTime = 0;
 uint64_t shiftedQuery = 0;
 uint64_t SentShiftedQuery = 0;
-uint64_t requestedQuerySent = 0;
-uint64_t requestedQueryReceived = 0;
+uint64_t RequestedData = 0;
+uint64_t ReceivedData = 0;
 
 ssize_t (*_recv) (int, void*, size_t, int) = recv;
 ssize_t (*_send) (int, const void*, size_t, int) = send;
@@ -114,7 +114,7 @@ void dht_request (Header& h) {
  if (server_no == local_no) return; 
  sendto (DHT_sock, &h, sizeof (Header), 0,(sockaddr*)&network_addr [server_no], s);
 
- requestedQuerySent++; 
+ RequestedData++; 
 }
 
 /*
@@ -187,7 +187,7 @@ void* thread_func_dht (void* arg) {
 
     sendto (DHT_sock, &DPrequested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
 
-    requestedQueryReceived++;
+    ReceivedData++;
    }
   }
  }
@@ -264,6 +264,10 @@ void * thread_func_scheduler (void * argv) {
    sprintf (tmp, "shiftedQuery=%"     PRIu64 "\n", shiftedQuery);
    strncat (send_data, tmp, 256);
    sprintf (tmp, "SentShiftedQuery=%" PRIu64 "\n", SentShiftedQuery);
+   strncat (send_data, tmp, 256);
+   sprintf (tmp, "RequestedData=%"    PRIu64 "\n", RequestedData);
+   strncat (send_data, tmp, 256);
+   sprintf (tmp, "ReceivedData=%"     PRIu64 "\n", ReceivedData);
    strncat (send_data, tmp, 256);
 
    _send (sock_scheduler, send_data, LOT, 0);

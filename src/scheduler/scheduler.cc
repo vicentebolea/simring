@@ -21,6 +21,7 @@ uint64_t TotalCacheHit = 0, TotalCacheMiss = 0, numQuery = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0, shiftedQuery = 0, SentShiftedQuery = 0; 
 uint64_t AveExecTime = 0, AveWaitTime = 0; 
 uint64_t MaxExecTime = 0, MaxWaitTime = 0; 
+uint64_t RequestedData = 0, ReceivedData = 0; 
 static jmp_buf finish;
 Node** backend;
 
@@ -31,6 +32,7 @@ void receive_all (void) {
  TotalExecTime = 0, TotalWaitTime = 0; 
  AveExecTime = 0, AveWaitTime = 0; 
  MaxExecTime = 0, MaxWaitTime = 0; 
+ RequestedData = 0, ReceivedData = 0; 
  SentShiftedQuery = 0, shiftedQuery = 0;
 
 	for (int i = 0; i < nservers; i++) backend[i]->send_msg ("INFO");  
@@ -70,6 +72,12 @@ void receive_all (void) {
 			else if (strcmp(key, "SentShiftedQuery") == 0) {
 				SentShiftedQuery += strtoull (val, NULL, 10);
       }
+			else if (strcmp(key, "RequestedData") == 0) {
+				RequestedData += strtoull (val, NULL, 10);
+      }
+			else if (strcmp(key, "ReceivedData") == 0) {
+				ReceivedData += strtoull (val, NULL, 10);
+      }
 		}
     AveExecTime = TotalExecTime / nservers;
     AveWaitTime = TotalWaitTime / nservers;
@@ -85,8 +93,8 @@ void print_header (void) {
    "|%15.15s|%15.15s|%15.15s|%15.15s|%15.15s|%15.15s|" 
    "%15.15s|%15.15s|%15.15s|\n", 
 
-   "Queries", "Hits", "Miss", "ShiftedQuery", "SentShiftedQuery",
-   "TotalExecTime", "MaxExecTime", "AveExecTime", "AveWaitTime"
+   "Queries", "Hits", "Miss", "recvShiftedQuery", "SentShiftedQuery",
+   "RequestedData", "RecievedData", "AveExecTime", "AveWaitTime"
  );
  RULER ();
 }
