@@ -1,4 +1,5 @@
 #include <signal.h>
+#include <node_client.hh>
 #include <simring.hh>
 #include <err.h>
 #include <setjmp.h>
@@ -16,7 +17,7 @@ using namespace std;
 
 int sock, port = 0, nservers = 0;
 int16_t* connected;
-uint64_t TotalCacheHit = 0, TotalCacheMiss = 0,  numQuery = 0;
+uint64_t TotalCacheHit = 0, TotalCacheMiss = 0, numQuery = 0;
 uint64_t TotalExecTime = 0, TotalWaitTime = 0, shiftedQuery = 0, SentShiftedQuery = 0; 
 uint64_t AveExecTime = 0, AveWaitTime = 0; 
 uint64_t MaxExecTime = 0, MaxWaitTime = 0; 
@@ -151,7 +152,7 @@ int main (int argc, char** argv) {
  struct timeval start, end;
 
  int c;
- while ((c = getopt(argc, const_cast<char**> (argv), "q:n:p:s:")) != -1)
+ while ((c = getopt (argc, const_cast<char**> (argv), "q:n:p:s:")) != -1)
   switch (c) {
    case 'q': nqueries = atoi (optarg); break;
    case 'n': nservers = atoi (optarg); break;

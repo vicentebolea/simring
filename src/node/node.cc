@@ -6,6 +6,7 @@
 	*/
 #include <node.hh>
 #include <simring.hh>
+#include <inttypes.h>
 #include <queue>
 #include <err.h>
 
@@ -87,19 +88,19 @@ char* get_ip (const char* interface) {
 }
 
 /* * */
-inline bool dht_check (uint64_t index) {
- return (local_no == (index / 100000)) ? true : false;
+inline bool dht_check (Header& h) {
+ return (local_no == (h.get_point ()/ 100000)) ? true : false;
 }
 
 /*
  *
  */
-void dht_request (uint64_t index) {
+void dht_request (Header& h) {
  socklen_t s = sizeof (struct sockaddr);
- int server_no = index / 100000;
+ int server_no = h.get_point () / 100000;
 
  if (server_no == local_no) return; 
- sendto (DHT_sock, &index, sizeof (index), 0,(sockaddr*)&network_addr [server_no], s);
+ sendto (DHT_sock, &h, sizeof (Header), 0,(sockaddr*)&network_addr [server_no], s);
 
  requestedQuerySent++; 
 }
@@ -145,6 +146,7 @@ void* thread_func_dht (void* arg) {
 
  while (!panic) {
   uint64_t index;
+  Header Hrequested;
   struct sockaddr_in client_addr;
   struct timeval timeout = {1, 0};     //! One second wait
 
@@ -156,21 +158,22 @@ void* thread_func_dht (void* arg) {
        FD_ISSET(sock_server_dht, &readSet)) 
   {
    //! Read a new query
-   ssize_t ret = recvfrom (sock_server_dht, &index, sizeof (index), 0, (sockaddr*)&client_addr, &s);
+   ssize_t ret = recvfrom (sock_server_dht, &Hrequested, sizeof (Header), 0, (sockaddr*)&client_addr, &s);
 
    if (ret == sizeof (index)) {
 
     //! load the data first from memory after from HD
-    diskPage requested = cache.get_diskPage (index);
+    diskPage DPrequested = cache.get_diskPage (Hrequested.get_point ());
 
     //! Send to the ip which is asking for it
     client_addr.sin_port = htons (PEER_PORT);
 
     char address [INET_ADDRSTRLEN];
     inet_ntop (AF_INET, &client_addr.sin_addr, address, INET_ADDRSTRLEN);
+    //if (trace)
     cout << "Server " << local_ip << " Received data from server " << address << "." << endl;
 
-    sendto (DHT_sock, &requested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
+    sendto (DHT_sock, &DPrequested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
 
     requestedQueryReceived++;
    }
@@ -199,8 +202,8 @@ void * thread_func_scheduler (void * argv) {
 
    query.setScheduledDate ();
 
-   int bytes_sent = recv (sock_scheduler, &query, sizeof(packet), 0);
-   if (bytes_sent != sizeof (packet)) 
+   int bytes_sent = recv (sock_scheduler, &query, sizeof(Packet), 0);
+   if (bytes_sent != sizeof (Packet)) 
     warn ("WARN [NODE: %s] Receiving data size", local_ip);
 
    if (query.trace) printf ("DEBUG [NODE: %s] query arrived from schd \n", local_ip);
@@ -209,8 +212,8 @@ void * thread_func_scheduler (void * argv) {
    bool found = cache.match (query);
    query.setFinishedDate ();                                        
 
-   if (!found && !dht_check (query.get_point ())) {
-    dht_request (query.get_point ());
+   if (!found && !dht_check (query)) {
+    dht_request (query);
     if (query.trace) 
       printf ("DEBUG [NODE: %s] Requesting data to [%s]\n", local_ip, "undetermine");
    }

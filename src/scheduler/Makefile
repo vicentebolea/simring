@@ -1,5 +1,7 @@
 INCLUDE := -I./../../lib/ -I./
+INCLUDE += -I./../common/
 LIBDIR  := -L./../../lib/
+LIBDIR  += -L./../common/
 LIB     := -l simring
 
 all: clean compile
@@ -9,4 +11,4 @@ compile:
 	g++ -c scheduler.cc -g -Wall -std=gnu++98 $(INCLUDE) -D_DEBUG
 
 clean:
-	-rm *.o node
+	-rm *.o scheduler
