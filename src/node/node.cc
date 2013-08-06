@@ -113,6 +113,8 @@ void dht_request (Header& h) {
 
  if (server_no == local_no) return; 
  sendto (DHT_sock, &h, sizeof (Header), 0,(sockaddr*)&network_addr [server_no], s);
+ if (h.trace)
+ cout << "Server " << local_ip << " Requesting: [" << h.get_point() << "] to server " << network_ip [server_no] << "." << endl;
 
  RequestedData++; 
 }
@@ -183,8 +185,8 @@ void* thread_func_dht (void* arg) {
 
     char address [INET_ADDRSTRLEN];
     inet_ntop (AF_INET, &client_addr.sin_addr, address, INET_ADDRSTRLEN);
-    //if (trace)
-    cout << "Server " << local_ip << " Received data from server " << address << "." << endl;
+    if (Hrequested.trace)
+    cout << "Server " << local_ip << " Received: [" << Hrequested.get_point() << "] from server " << address << "." << endl;
 
     sendto (DHT_sock, &DPrequested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
 

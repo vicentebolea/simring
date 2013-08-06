@@ -149,15 +149,15 @@ bool SETcache::is_valid (diskPage& dp) {
  uint64_t oldest = (*old).time;
 
  if ((uint64_t)ema - lowest > (uint64_t)highest - ema)
-  max_dist = labs ((uint64_t)ema - lowest);
+  max_dist = labs (((uint64_t)ema) - lowest);
 
  else 
-  max_dist = labs ((uint64_t)highest - ema);
+  max_dist = labs (((uint64_t)highest) - ema);
 
 
 
  //! If the new DP was more recently used than the oldest :LRU:
- if (dp.time < oldest || max_dist > (labs((uint64_t)dp.point - ema))) {
+ if (dp.time < oldest || max_dist > (labs((uint64_t)dp.point - ((uint64_t)ema)))) {
   diskPage in = dp;
 
   pthread_mutex_lock (&mutex_match);
