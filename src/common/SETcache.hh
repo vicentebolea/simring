@@ -43,7 +43,7 @@ class SETcache {
 
  public:
   SETcache (int, char * p = NULL);
-  ~SETcache () { delete cache; }
+  ~SETcache () { delete cache; delete cache_time;}
 
   void set_policy (int);
   void setDataFile (char*);
