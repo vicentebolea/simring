@@ -1,0 +1,32 @@
+<experiment queries="200000">
+ <network>
+
+  <port name="scheduler" number="20000"/>
+  <port name="migration" number="20001"/>
+  <port name="request"   number="20002"/>
+
+  <backend>
+   <node name="raven01">first</node>
+   <node name="raven02"></node>
+   <node name="raven03"></node>
+   <node name="raven04"></node>
+   <node name="raven05"></node>
+   <node name="raven06"></node>
+   <node name="raven07"></node>
+   <node name="raven08"></node>
+  </backend>
+  
+ </network>
+
+ <input>data</input>
+ <output>mysql</output>
+
+ <!--
+ <policy>
+  <ring status="TRUE" />
+  <join status="TRUE" />
+  <status="TRUE" />
+ </policy>
+ -->
+
+</experiment>
