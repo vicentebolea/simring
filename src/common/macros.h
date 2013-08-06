@@ -33,7 +33,7 @@
 #endif
 
 #ifndef LOT
-#define LOT 1024
+#define LOT 2048
 #endif
 
 #endif

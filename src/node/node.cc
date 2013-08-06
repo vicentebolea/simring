@@ -172,8 +172,9 @@ void* thread_func_dht (void* arg) {
    //! Read a new query
    ssize_t ret = recvfrom (sock_server_dht, &Hrequested, sizeof (Header), 0, (sockaddr*)&client_addr, &s);
 
-   if (ret == sizeof (index)) {
+   if (ret == sizeof (Header)) {
 
+    ReceivedData++;
     //! load the data first from memory after from HD
     diskPage DPrequested = cache.get_diskPage (Hrequested.get_point ());
 
@@ -187,7 +188,6 @@ void* thread_func_dht (void* arg) {
 
     sendto (DHT_sock, &DPrequested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
 
-    ReceivedData++;
    }
   }
  }
