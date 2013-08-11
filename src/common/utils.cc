@@ -17,15 +17,37 @@
 #include <cfloat>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-void     log    (const char* type, const char* _ip, const char* in, ...) {
+const char *error_str [20] = {
+ "[\e[31mERROR\e[0m]",   //! RED COLOR
+ "[\e[35mWARN\e[0m]",    //! MAGENTA COLOR 
+ "[\e[32mDEBUG\e[0m]",   //! GREEN COLOR 
+ "[\e[34mINFO\e[0m]"    //! BLUE COLOR
+};
+
+const char *error_str_nocolor [20] = {"ERROR", "WARN", "DEBUG", "INFO"};
+
+
+void 
+log (int type, const char* _ip, const char* in, ...) 
+{
  va_list args;
 
- fprintf (stderr, "%s\e[33m::\e[0m[\e[36m%s\e[0m]\e[1m \e[31m", type,  _ip);
+ if (isatty (fileno (stdout)))
+   fprintf (stderr, "%s\e[33m::\e[0m[\e[36m%s\e[0m]\e[1m \e[33m", error_str [type],  _ip);
+ else 
+   fprintf (stderr, "%s::[%s] ", error_str_nocolor [type],  _ip);
+
  va_start (args, in);
  vfprintf (stderr, in, args);
  va_end (args);
- fprintf (stderr, "\e[0m\n");
+
+ if (isatty (fileno (stdout)))
+   fprintf (stderr, "\e[0m\n");
+ else 
+   fprintf (stderr, "\n");
+
 }
 
  uint64_t
