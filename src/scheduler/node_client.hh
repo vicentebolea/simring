@@ -58,7 +58,7 @@ class Node {
 			socklen_t sin_size = sizeof (struct sockaddr_in);
 			sockaddr_in addr;
 			fd = ::accept (sock, (struct sockaddr *)&addr, &sin_size);
-			printf ("[SCHEDULER] Backend server linked (addr = %s).\n", inet_ntoa(addr.sin_addr)); 
+			log (M_INFO, "SCHEDULER", "Backend server linked (addr = %s).", inet_ntoa(addr.sin_addr)); 
 			return *this;
 		}
 

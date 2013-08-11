@@ -18,6 +18,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+void     log    (const char* type, const char* _ip, const char* in, ...) {
+ va_list args;
+
+ fprintf (stderr, "%s::[NODE: %s] ", type,  _ip);
+ va_start (args, in);
+ vfprintf (stderr, in, args);
+ va_end (args);
+ fprintf (stderr, "\n");
+}
+
  uint64_t
 timediff (struct timeval *end_time, struct timeval *start_time)
 {
@@ -96,4 +106,20 @@ uint64_t prepare_input (char* in) {
  b /= 2000;
  ret = hilbert (1024, a, b);
  return ret;
+}
+
+char* get_ip (const char* interface) {
+ static char if_ip [INET_ADDRSTRLEN];
+ struct ifaddrs *ifAddrStruct = NULL, *ifa = NULL;
+
+ getifaddrs (&ifAddrStruct);
+
+ for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
+  if (ifa->ifa_addr->sa_family == AF_INET && strcmp (ifa->ifa_name, interface) == 0)
+   inet_ntop (AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, 
+              if_ip, INET_ADDRSTRLEN);
+
+ if (ifAddrStruct != NULL) freeifaddrs (ifAddrStruct);
+ 
+ return if_ip;
 }

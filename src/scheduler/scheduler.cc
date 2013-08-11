@@ -138,7 +138,7 @@ void wakeUpServer (void) {
  if (listen (sock, nservers + 1) == -1)
   err (EXIT_FAILURE, "[SCHEDULER] Listen");
 
- printf ("[SCHEDULER] Network setted up using port = %i\n", port);
+ log (M_INFO, "SCHEDULER", "Network setted up using port = %i\n", port);
 }
 
 /*
@@ -177,7 +177,7 @@ int main (int argc, char** argv) {
 
  for (int i = 0; i < nservers; i++) (backend[i] = new Node ())->accept (sock);
 
- printf ("[SCHEDULER] All backend servers linked\n");
+ log (M_INFO, "SCHEDULER", "All backend servers linked");
  print_header ();
 
  if (setjmp (finish)) goto end; 

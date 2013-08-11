@@ -80,25 +80,6 @@ int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
 
 //-----------------------------------------------------------------------
 
-/*
- *
- */
-char* get_ip (const char* interface) {
- static char if_ip [INET_ADDRSTRLEN];
- struct ifaddrs *ifAddrStruct = NULL, *ifa = NULL;
-
- getifaddrs (&ifAddrStruct);
-
- for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
-  if (ifa->ifa_addr->sa_family == AF_INET && strcmp (ifa->ifa_name, interface) == 0)
-   inet_ntop (AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, 
-              if_ip, INET_ADDRSTRLEN);
-
- if (ifAddrStruct != NULL) freeifaddrs (ifAddrStruct);
- 
- return if_ip;
-}
-
 /* * */
 inline bool dht_check (Header& h) {
  return (local_no == (h.get_point ()/ 100000)) ? true : false;

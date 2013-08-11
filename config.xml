@@ -1,23 +1,31 @@
-<experiment queries="200000">
+<?xml version="1.0"?>
+
+<!-- 
+ ! Example config file, tentative :TODO:
+ !
+ !
+-->
+<experiment>
  <network>
 
   <port name="scheduler" number="20000"/>
   <port name="migration" number="20001"/>
   <port name="request"   number="20002"/>
 
-  <backend>
-   <node name="raven01">first</node>
-   <node name="raven02"></node>
-   <node name="raven03"></node>
-   <node name="raven04"></node>
-   <node name="raven05"></node>
-   <node name="raven06"></node>
-   <node name="raven07"></node>
-   <node name="raven08"></node>
-  </backend>
+  <node type="scheduler" name="ravenleader" ip="192.168.1.201"/>
+  <node type="backend"   name="raven01"     ip="192.168.1.1"/>
+  <node type="backend"   name="raven02"     ip="192.168.1.2"/>
+  <node type="backend"   name="raven03"     ip="192.168.1.3"/>
+  <node type="backend"   name="raven04"     ip="192.168.1.4"/>
+  <node type="backend"   name="raven05"     ip="192.168.1.5"/>
+  <node type="backend"   name="raven06"     ip="192.168.1.6"/>
+  <node type="backend"   name="raven07"     ip="192.168.1.7"/>
+  <node type="backend"   name="raven08"     ip="192.168.1.8"/>
+  <node type="backend"   name="raven08"     ip="192.168.1.9"/>
+  <node type="backend"   name="raven08"     ip="192.168.1.10"/>
   
  </network>
-
+ <queries>200000</queries>
  <input>data</input>
  <output>mysql</output>
 
