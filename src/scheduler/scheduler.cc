@@ -138,7 +138,7 @@ void wakeUpServer (void) {
  if (listen (sock, nservers + 1) == -1)
   err (EXIT_FAILURE, "[SCHEDULER] Listen");
 
- log (M_INFO, "SCHEDULER", "Network setted up using port = %i\n", port);
+ log (M_INFO, "SCHEDULER", "Network setted up using port = %i", port);
 }
 
 /*

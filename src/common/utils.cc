@@ -21,11 +21,11 @@
 void     log    (const char* type, const char* _ip, const char* in, ...) {
  va_list args;
 
- fprintf (stderr, "%s::[NODE: %s] ", type,  _ip);
+ fprintf (stderr, "%s\e[33m::\e[0m[\e[36m%s\e[0m]\e[1m \e[31m", type,  _ip);
  va_start (args, in);
  vfprintf (stderr, in, args);
  va_end (args);
- fprintf (stderr, "\n");
+ fprintf (stderr, "\e[0m\n");
 }
 
  uint64_t
