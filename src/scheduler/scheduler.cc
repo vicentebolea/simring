@@ -145,7 +145,7 @@ void wakeUpServer (void) {
  * 
  */
 void catchSignal (int Signal) {
- cerr << "Closing sockets & files.\t Signal: " <<  strsignal(Signal) << endl;
+ log (M_INFO, "SCHEDULER", "Closing sockets & files. REASON: %s: ", strsignal(Signal));
  longjmp (finish, 1);
  close (sock);
  exit (EXIT_FAILURE);
@@ -168,7 +168,7 @@ int main (int argc, char** argv) {
   }
 
  if (!nqueries || !nservers || !port)
-   err (EXIT_FAILURE, "[SCHEDULER] PARSER: all the options needs to be setted");
+   log (M_ERR, "SCHEDULER", "PARSER: all the options needs to be setted");
  
  backend = new Node* [nservers];
  signal (SIGINT | SIGSEGV | SIGTERM, catchSignal);		//catching signals to close sockets and files
@@ -224,9 +224,12 @@ int main (int argc, char** argv) {
   }
 
   victim .update_EMA (point) .set_time (cnt);
-//  if (cnt % 200 == 0) victim.send (point, true);
-  //else
-                  victim.send (point);
+  if (cnt % 200 == 0) {
+    victim.send (point, true);
+    log (M_DEBUG, "SCHEDULER", "Trazable query sent by the scheduler");
+  }
+
+  victim.send (point);
 
   if ((cnt + 1) % step == 0) {
    sleep (1);

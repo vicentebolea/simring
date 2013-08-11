@@ -1,11 +1,12 @@
 /*
-	* @file This file contains the source code of the application 
-	*       which will run in each server 
-	*
-	*
-	*/
+ * @file This file contains the source code of the application 
+ *       which will run in each server 
+ *
+ *
+ */
 #include <node.hh>
 
+#include <dht.hh>
 #include <inttypes.h>
 #include <time.h>
 #include <math.h>
@@ -27,10 +28,6 @@
 #define PEER_PORT 20001
 #define DHT_PORT  20002
 
-//-------------------------------------------------------
-//----------DHT SECTION----------------------------------
-//-------------------------------------------------------
-
 const char * network_ip [10] = 
 {
  "192.168.1.1",
@@ -45,16 +42,12 @@ const char * network_ip [10] =
  "192.168.1.10"
 };
 
-struct sockaddr_in network_addr [10];
-char* local_ip;
-int local_no, DHT_sock;
-
-//-------------------------------------------------------
-
 queue<Query> queue_scheduler;
 queue<Query> queue_neighbor;
 SETcache cache (CACHESIZE); 
 int sock_scheduler, sock_left, sock_right, sock_server;  
+char* local_ip;
+DHT dht;
 
 bool panic = false;
 
@@ -80,45 +73,6 @@ int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
 
 //-----------------------------------------------------------------------
 
-/* * */
-inline bool dht_check (Header& h) {
- return (local_no == (h.get_point ()/ 100000)) ? true : false;
-}
-
-/*
- *
- */
-void dht_request (Header& h) {
- socklen_t s = sizeof (struct sockaddr);
- int server_no = h.get_point () / 100000;
-
- if (server_no == local_no) return; 
- sendto (DHT_sock, &h, sizeof (Header), 0,(sockaddr*)&network_addr [server_no], s);
- if (h.trace)
- cout << "Server " << local_ip << " Requesting: [" << h.get_point() << "] to server " << network_ip [server_no] << "." << endl;
-
- RequestedData++; 
-}
-
-/*
- *
- */
-void dht_init () {
- local_ip = get_ip ("eth0"); 
- DHT_sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
- //! Get local index
- for (local_no = 0; strcmp (network_ip [local_no], local_ip) == 0; local_no++);
- 
- //! Fill address vector
- for (int i = 0; i < 10; i++) {
-   network_addr [i] .sin_family      = AF_INET;
-   network_addr [i] .sin_port        = htons (DHT_PORT);
-   network_addr [i] .sin_addr.s_addr = inet_addr (network_ip [i]);
-   bzero (&(network_addr [i].sin_zero), 8);
- }
-}
-
 /*
  *
  */
@@ -126,8 +80,7 @@ void* thread_func_dht (void* arg) {
  int sock_server_dht;
  struct sockaddr_in addr;
  socklen_t s = sizeof (addr);
-
- dht_init ();                          //! Init DHT mockup system
+ dht.set_network (DHT_PORT, 10, local_ip, network_ip);
 
  //! Setup the addr of the server
  sock_server_dht = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -140,7 +93,6 @@ void* thread_func_dht (void* arg) {
  bind (sock_server_dht, (sockaddr*)&addr, s);
 
  while (!panic) {
-  uint64_t index;
   Header Hrequested;
   struct sockaddr_in client_addr;
   struct timeval timeout = {1, 0};     //! One second wait
@@ -150,7 +102,7 @@ void* thread_func_dht (void* arg) {
   FD_SET (sock_server_dht, &readSet);
 
   if ((select(sock_server_dht+1, &readSet, NULL, NULL, &timeout) >= 0) &&
-       FD_ISSET(sock_server_dht, &readSet)) 
+    FD_ISSET(sock_server_dht, &readSet)) 
   {
    //! Read a new query
    ssize_t ret = recvfrom (sock_server_dht, &Hrequested, sizeof (Header), 0, (sockaddr*)&client_addr, &s);
@@ -167,9 +119,9 @@ void* thread_func_dht (void* arg) {
     char address [INET_ADDRSTRLEN];
     inet_ntop (AF_INET, &client_addr.sin_addr, address, INET_ADDRSTRLEN);
     if (Hrequested.trace)
-    cout << "Server " << local_ip << " Received: [" << Hrequested.get_point() << "] from server " << address << "." << endl;
+     log (M_DEBUG, local_ip, "Received a petition of requested data from %s", address);
 
-    sendto (DHT_sock, &DPrequested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s);
+    sendto (sock_server_dht, &DPrequested, sizeof (diskPage), 0, (sockaddr*)&client_addr, s); //:TRICKY:
 
    }
   }
@@ -199,19 +151,15 @@ void * thread_func_scheduler (void * argv) {
 
    int bytes_sent = recv (sock_scheduler, &query, sizeof(Packet), 0);
    if (bytes_sent != sizeof (Packet)) 
-    warn ("WARN [NODE: %s] Receiving data size", local_ip);
+    log (M_WARN, local_ip, "I Received a strange length data");
 
-   if (query.trace) printf ("DEBUG [NODE: %s] query arrived from schd \n", local_ip);
+   if (query.trace) log (M_DEBUG, local_ip, "Query arrived from scheduler");
 
    query.setStartDate ();                                           
    bool found = cache.match (query);
    query.setFinishedDate ();                                        
 
-   if (!found && !dht_check (query)) {
-    dht_request (query);
-    if (query.trace) 
-      printf ("DEBUG [NODE: %s] Requesting data to [%s]\n", local_ip, "undetermine");
-   }
+   if (!found && !dht.check (query)) dht.request (query);
 
    if (found) hitCount++; else missCount++;
 
@@ -261,9 +209,7 @@ void * thread_func_scheduler (void * argv) {
    sleep (1);
 
   } else {
-   char host_name [256];
-   gethostname (host_name, 256);
-   warn ("Unknown message received [ID: %s] [MSG: %s]", host_name, recv_data);
+   log (M_WARN, local_ip, "Unknown message received [MSG: %s]", recv_data);
    panic = true;
   }
  }
@@ -376,6 +322,7 @@ void setup_client_peer (const int port, const char* host, int* sock, sockaddr_in
 void setup_client_scheduler (int port, const char* host, int* sock) {
  struct sockaddr_in server_addr;  
  socklen_t s = sizeof (sockaddr);
+ local_ip = get_ip ("eth0");
 
  EXIT_IF (*sock = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP), "SOCKET SCHEDULER");
 
@@ -407,12 +354,12 @@ void parse_args (int argc, const char** argv, Arguments* args) {
 
  // Check if everything was set
  if (!args->host_str || !args->data_file || !args->port)
-  err (EXIT_FAILURE, "PARSER: Arguments needs to be setted");
+  log (M_ERR, local_ip, "PARSER: Arguments needs to be setted");
 }
 
 void catch_signal (int arg) {
  close_all ();
- err (EXIT_SUCCESS, "Sockets closed for security");
+ log (M_ERR, local_ip, "Sockets closed for security");
 }
 
 void close_all () {
@@ -420,5 +367,4 @@ void close_all () {
  close (sock_left);
  close (sock_right);
  close (sock_server);
- close (DHT_sock);
 }

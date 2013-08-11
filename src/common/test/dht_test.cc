@@ -16,7 +16,7 @@ int main () {
  Header h1;
 
  my_dht.set_network (24444, 4, "ra0", ips); 
- h1.set_point (12000) .set_trazable ();
+ h1.set_point (320000) .set_trazable ();
 
  cout << "CHECK: " << my_dht.check (h1) << endl;
 

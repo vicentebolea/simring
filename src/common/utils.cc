@@ -48,6 +48,8 @@ log (int type, const char* _ip, const char* in, ...)
  else 
    fprintf (stderr, "\n");
 
+ if (type == M_ERR) exit (EXIT_SUCCESS);
+
 }
 
  uint64_t
