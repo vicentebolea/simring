@@ -26,7 +26,7 @@ const char *error_str [20] = {
  "[\e[34mINFO\e[0m]"     //! BLUE COLOR
 };
 
-const char *error_str_nocolor [20] = {"ERROR", "WARN", "DEBUG", "INFO"};
+const char *error_str_nocolor [20] = {"[ERROR]", "[WARN]", "[DEBUG]", "[INFO]"};
 
 
 void 
