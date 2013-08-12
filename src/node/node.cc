@@ -153,13 +153,15 @@ void * thread_func_scheduler (void * argv) {
    query.setScheduledDate ();
 
    int bytes_sent = recv (sock_scheduler, &query, sizeof(Packet), 0);
-   if (bytes_sent != sizeof (Packet)) 
+   if (bytes_sent != sizeof (Packet)) {
     log (M_WARN, local_ip, "I Received a strange length data");
+    continue;
+   }
 
    if (query.trace) log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
 
    query.setStartDate ();                                           
-   bool found = cache.match (query);
+   bool found = cache.match (query); //! change it
    query.setFinishedDate ();                                        
 
    if (query.trace) {
@@ -368,7 +370,7 @@ void parse_args (int argc, const char** argv, Arguments* args) {
 
 void catch_signal (int arg) {
  close_all ();
- log (M_ERR, local_ip, "Sockets closed for security");
+ log (M_ERR, local_ip, "KILL Signal received, sockets closed");
 }
 
 void close_all () {
