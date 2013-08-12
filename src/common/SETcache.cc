@@ -74,7 +74,6 @@ ostream& operator<< (ostream& out, SETcache& in) {
  */
 bool SETcache::match (Query& q) {
  if (policy & UPDATE) update (q.low_b, q.upp_b);
- //cout << "EMA: " << ema << "LOW: " << low << "UP: " << upp << endl;
 
  this->boundary_low = q.low_b;
  this->boundary_upp = q.upp_b;

@@ -156,11 +156,16 @@ void * thread_func_scheduler (void * argv) {
    if (bytes_sent != sizeof (Packet)) 
     log (M_WARN, local_ip, "I Received a strange length data");
 
-   if (query.trace) log (M_DEBUG, local_ip, "Query arrived from scheduler");
+   if (query.trace) log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
 
    query.setStartDate ();                                           
    bool found = cache.match (query);
    query.setFinishedDate ();                                        
+
+   if (query.trace) {
+    if (found) log (M_DEBUG, local_ip, "[QUERY: %i] found in the cache",query.get_point());
+    else       log (M_DEBUG, local_ip, "[QUERY: %i] not found in the cache",query.get_point());
+   }
 
    if (!found && !dht.check (query)) 
      if (dht.request (query)) RequestedData++;
