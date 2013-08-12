@@ -34,7 +34,7 @@ log (int type, const char* _ip, const char* in, ...)
 {
  va_list args;
 
- if (isatty (fileno (stdout)) && false)
+ if (isatty (fileno (stdout)) || true)
    fprintf (stderr, "%s\e[33m::\e[0m[\e[36m%s\e[0m]\e[1m \e[33m", error_str [type],  _ip);
  else 
    fprintf (stderr, "%s::[%s] ", error_str_nocolor [type],  _ip);
@@ -43,7 +43,7 @@ log (int type, const char* _ip, const char* in, ...)
  vfprintf (stderr, in, args);
  va_end (args);
 
- if (isatty (fileno (stdout)) && false)
+ if (isatty (fileno (stdout)) || true)
    fprintf (stderr, "\e[0m\n");
  else 
    fprintf (stderr, "\n");
