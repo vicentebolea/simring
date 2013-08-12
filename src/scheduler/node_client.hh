@@ -71,7 +71,7 @@ class Node {
    toSend.trace = trace;
 			::send_msg (fd, "QUERY");
 			::send (fd, &toSend, sizeof (Packet), 0);
-   if (trace) log (M_DEBUG, "SCHEDULER", "Query: %i sent to backend node: %s", (int)point, inet_ntoa(addr.sin_addr)); 
+   if (trace) log (M_DEBUG, "SCHEDULER", "[QUERY: %i] sent to backend node: %s", (int)point, inet_ntoa(addr.sin_addr)); 
 			return *this;
 		}
 

@@ -226,7 +226,6 @@ int main (int argc, char** argv) {
   victim .update_EMA (point) .set_time (cnt);
   if (cnt % 2000 == 0) {
     victim.send (point, true);
-    log (M_DEBUG, "SCHEDULER", "Trazable query sent by the scheduler");
   }
 
   victim.send (point);
