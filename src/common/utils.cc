@@ -23,7 +23,7 @@ const char *error_str [20] = {
  "[\e[31mERROR\e[0m]",   //! RED COLOR
  "[\e[35mWARN\e[0m]",    //! MAGENTA COLOR 
  "[\e[32mDEBUG\e[0m]",   //! GREEN COLOR 
- "[\e[34mINFO\e[0m]"    //! BLUE COLOR
+ "[\e[34mINFO\e[0m]"     //! BLUE COLOR
 };
 
 const char *error_str_nocolor [20] = {"ERROR", "WARN", "DEBUG", "INFO"};

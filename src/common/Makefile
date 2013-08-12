@@ -1,6 +1,5 @@
-CXX ?= g++
-OPTIONS ?= -D__STDC_FORMAT_MACROS
 CXXFLAGS += -I.
+OPTIONS = -lstdc++
 sources := $(wildcard *.cc) 
 objects := $(patsubst %.cc, %.o, $(sources))
 .SUFFIXES: .o .cc

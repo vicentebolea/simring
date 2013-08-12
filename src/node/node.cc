@@ -23,7 +23,10 @@
 #include <queue>
 #include <err.h>
 
+#ifndef CACHESIZE
 #define CACHESIZE 1000
+#endif
+
 #define SCH_PORT  20000
 #define PEER_PORT 20001
 #define DHT_PORT  20002

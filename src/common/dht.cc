@@ -11,7 +11,7 @@ DHT::~DHT () {
  for (int i = 0; i < _nservers; i++)
   delete network_ip [i];
 
- delete network_ip; 
+ delete network_ip;
  delete network_addr;
 }
 
