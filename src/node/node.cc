@@ -162,7 +162,8 @@ void * thread_func_scheduler (void * argv) {
    bool found = cache.match (query);
    query.setFinishedDate ();                                        
 
-   if (!found && !dht.check (query)) dht.request (query);
+   if (!found && !dht.check (query)) 
+     if (dht.request (query)) RequestedData++;
 
    if (found) hitCount++; else missCount++;
 
