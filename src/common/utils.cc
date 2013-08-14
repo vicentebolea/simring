@@ -59,10 +59,10 @@ fd_is_ready (int fd)
 
  fd_set readSet;
  FD_ZERO(&readSet);
- FD_SET(sock_server, &readSet);
+ FD_SET(fd, &readSet);
 
- if ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && 
-     FD_ISSET(sock_server, &readSet))
+ if ((select(fd+1, &readSet, NULL, NULL, &timeout) >= 0) && 
+     FD_ISSET(fd, &readSet))
   return true;
 
  else 
