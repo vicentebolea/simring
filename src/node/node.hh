@@ -20,19 +20,7 @@
 #include <error.h>
 #include <simring.hh>
 
-#ifndef __GNUC__
-#error "Required GCC"
-#endif
-
-#ifdef _DEBUG
-#define WEAK __attribute__((weak))
-#else
-#define WEAK
-#endif
-
 using namespace std;
-
-#define EXIT_IF(x,m) if ((x) == -1) {error (EXIT_FAILURE, errno, (m));}
 
 extern bool panic;
 extern SETcache cache; 

@@ -1,6 +1,16 @@
 #ifndef __MACROS_H__
 #define __MACROS_H__
 
+#ifndef __GNUC__
+#error "Required GCC"
+#endif
+
+#ifdef _DEBUG
+#define WEAK __attribute__((weak))
+#else
+#define WEAK
+#endif
+
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
@@ -36,5 +46,6 @@
 #define LOT 2048
 #endif
 
+#define EXIT_IF(x,m) if ((x) == -1) {log (M_ERR, "SOMENODE", (m));}
 
 #endif

@@ -52,7 +52,24 @@ log (int type, const char* _ip, const char* in, ...)
 
 }
 
- uint64_t
+inline bool
+fd_is_ready (int fd) 
+{
+ struct timeval timeout = {1, 0};
+
+ fd_set readSet;
+ FD_ZERO(&readSet);
+ FD_SET(sock_server, &readSet);
+
+ if ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && 
+     FD_ISSET(sock_server, &readSet))
+  return true;
+
+ else 
+  return false;
+}
+
+uint64_t
 timediff (struct timeval *end_time, struct timeval *start_time)
 {
  return  (end_time->tv_usec + (1000000 * end_time->tv_sec)) 
@@ -141,9 +158,9 @@ char* get_ip (const char* interface) {
  for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
   if (ifa->ifa_addr->sa_family == AF_INET && strcmp (ifa->ifa_name, interface) == 0)
    inet_ntop (AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, 
-              if_ip, INET_ADDRSTRLEN);
+     if_ip, INET_ADDRSTRLEN);
 
  if (ifAddrStruct != NULL) freeifaddrs (ifAddrStruct);
- 
+
  return if_ip;
 }
