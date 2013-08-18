@@ -10,6 +10,7 @@
 #include <macros.h>
 #include <utils.hh>
 #include <packets.hh>
+#include <dht.hh>
 #include <SETcache.hh>
 
 #endif

@@ -17,7 +17,6 @@
 #include <cfloat>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 const char *error_str [20] = {
  "[\e[31mERROR\e[0m]",   //! RED COLOR
@@ -27,7 +26,6 @@ const char *error_str [20] = {
 };
 
 const char *error_str_nocolor [20] = {"[ERROR]", "[WARN]", "[DEBUG]", "[INFO]"};
-
 
 void 
 log (int type, const char* _ip, const char* in, ...) 
@@ -52,66 +50,8 @@ log (int type, const char* _ip, const char* in, ...)
 
 }
 
-inline bool
-fd_is_ready (int fd) 
-{
- struct timeval timeout = {1, 0};
-
- fd_set readSet;
- FD_ZERO(&readSet);
- FD_SET(fd, &readSet);
-
- if ((select(fd+1, &readSet, NULL, NULL, &timeout) >= 0) && 
-     FD_ISSET(fd, &readSet))
-  return true;
-
- else 
-  return false;
-}
-
-uint64_t
-timediff (struct timeval *end_time, struct timeval *start_time)
-{
- return  (end_time->tv_usec + (1000000 * end_time->tv_sec)) 
-  - (start_time->tv_usec + (1000000 * start_time->tv_sec));
-}
-
- void
-send_msg (int socket, const char* send_data)
-{
- int msg_len = strlen (send_data);
- send (socket, &msg_len, sizeof(int), 0); 
- send (socket, send_data, msg_len, 0); 
-}
-
- void
-recv_msg (int socket, char* recv_data)
-{
- int nbytes, bytes_received = 0, r = 0;
- while (r != 4)
-  r += recv (socket, (char*) &nbytes+r, sizeof(int)-r, MSG_WAITALL);
-
- // read nbytes;
- while (bytes_received < nbytes)
-  bytes_received += recv (socket, recv_data+bytes_received, nbytes-bytes_received, MSG_WAITALL);
-
- recv_data [bytes_received] = 0;
-}
-
- int
-poisson (double c)
-{ 
- int x = 0;
- srand (time(NULL));
-
- for (double t = .0; t <= 1.0; x++) {
-  t -= log ((double)(rand()%1000) / 1000.0) / c;
- }
- return x;
-}
-
 //rotate/flip a quadrant appropriately
- void
+inline void
 rot (int64_t n, int64_t  *x, int64_t *y, int64_t  rx, int64_t ry) 
 {
  if (ry == 0) {
@@ -127,7 +67,7 @@ rot (int64_t n, int64_t  *x, int64_t *y, int64_t  rx, int64_t ry)
  }
 }
 
- int64_t
+int64_t
 hilbert (int64_t n, int64_t x, int64_t y) 
 {
  int64_t rx, ry, s, d = 0;
@@ -140,7 +80,9 @@ hilbert (int64_t n, int64_t x, int64_t y)
  return d;
 }
 
-uint64_t prepare_input (char* in) {
+uint64_t
+prepare_input (char* in) 
+{
  int64_t a, b, ret;
  sscanf (in, "%" SCNi64 " %" SCNi64 , &a , &b );
  a /= 2000;
@@ -149,7 +91,9 @@ uint64_t prepare_input (char* in) {
  return ret;
 }
 
-char* get_ip (const char* interface) {
+char*
+get_ip (const char* interface) 
+{
  static char if_ip [INET_ADDRSTRLEN];
  struct ifaddrs *ifAddrStruct = NULL, *ifa = NULL;
 
@@ -163,4 +107,21 @@ char* get_ip (const char* interface) {
  if (ifAddrStruct != NULL) freeifaddrs (ifAddrStruct);
 
  return if_ip;
+}
+
+char*
+byte_units (const double bytes)
+{
+ static char result[0x100];
+
+ if (bytes >= 1 << 30)
+  sprintf(result, "%0.2lf GiB", bytes / (1 << 30));
+ else if (bytes >= 1 << 20)
+  sprintf(result, "%0.2lf MiB", bytes / (1 << 20));
+ else if (bytes >= 1 << 10)
+  sprintf(result, "%0.2lf KiB", bytes / (1 << 10));
+ else
+  sprintf(result, "%.0lf B", bytes);
+
+ return result;
 }
