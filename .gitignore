@@ -8,6 +8,9 @@ src/common/libsimring.a
 src/node/node
 src/scheduler/scheduler
 
+*libsimring.a
+*a.out
+
 # Other files and folders
 *.o
 data/
