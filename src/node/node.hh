@@ -46,7 +46,7 @@ class Node {
   int sock_scheduler, sock_left, sock_right, sock_server;  
   int sch_port, peer_port, dht_port, local_no;
   char *local_ip, peer_left [32], peer_right[32], host_str [128], data_file [128];
-  bool panic;
+  bool panic, color;
 
   uint32_t queryRecieves;
   uint32_t queryProcessed;

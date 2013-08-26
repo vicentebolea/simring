@@ -6,9 +6,10 @@
 #include <math.h>
 
 char help [] =
- "|====================================================|\n"
+ "+----------------------------------------------------+\n"
  "| RANDOM NUMBER GENERATOR                            |\n"
- "|====================================================|\n"
+ "+----------------------------------------------------+\n"
+ "|                                                    |\n"
  "|  -h           help                                 |\n" 
  "|  -n           Number of numbers                    |\n"
  "|  -f ,from     Lower boundary                       |\n"
@@ -16,10 +17,10 @@ char help [] =
  "|  -l ,lambda   lambda parameter (exponential dist)  |\n"
  "|  -d ,dist     Distribution (exponential|uniform)   |\n"
  "|                                                    |\n"
- "|====================================================|\n"
+ "+----------------------------------------------------+\n"
  "| AUTHOR                vicente.bolea@gmail.com      |\n"
  "| VERSION               0.1.0                        |\n"
- "|====================================================|\n";
+ "+----------------------------------------------------+\n";
 
 inline int uniform (const int low, const int up) {
 	return (rand () % up) + low;
@@ -35,6 +36,7 @@ int main (int argc, const char ** argv) {
   char dist [32];
 
 	do {
+    if (argc == 1)  printf ("%s\n",help);
 		switch (c) {
 			case 'h': printf ("%s\n",help);           break;
 			case 'n': limit = atoi (optarg);          break;

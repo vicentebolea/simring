@@ -33,7 +33,7 @@ Node::Node (int argc, const char ** argv, const char * ifa): cache (new SETcache
  peer_port = 20001;
  dht_port  = 20002;
 
- signal (SIGTERM, &Node::signal_handler);
+ signal (SIGTERM, Node::signal_handler);
  signal (SIGSEGV, Node::signal_handler);
  signal (SIGKILL, Node::signal_handler);
 
