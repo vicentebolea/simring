@@ -29,5 +29,6 @@ int      poisson       (double);
 int64_t  hilbert       (int64_t n, int64_t x, int64_t y);
 uint64_t prepare_input (char* in);
 char*    get_ip        (const char*);
+void     dump_trace    (void);
 
 #endif

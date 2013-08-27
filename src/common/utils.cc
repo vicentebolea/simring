@@ -1,5 +1,6 @@
 #include <utils.hh>
 
+#include <execinfo.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -163,4 +164,11 @@ char* get_ip (const char* interface) {
  if (ifAddrStruct != NULL) freeifaddrs (ifAddrStruct);
 
  return if_ip;
+}
+
+void dump_trace (void) {
+	void * buffer[255];
+	const int calls = backtrace(buffer,
+		sizeof(buffer) / sizeof(void *));
+	backtrace_symbols_fd(buffer, calls, 1);
 }

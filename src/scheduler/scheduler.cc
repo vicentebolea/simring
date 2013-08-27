@@ -226,9 +226,10 @@ int main (int argc, char** argv) {
   victim .update_EMA (point) .set_time (cnt);
   if (cnt % 2000 == 0) {
     victim.send (point, true);
-  }
 
-  victim.send (point);
+  } else {
+    victim.send (point);
+  }
 
   if ((cnt + 1) % step == 0) {
    sleep (1);

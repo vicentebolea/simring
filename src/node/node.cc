@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <queue>
 #include <err.h>
+#include <signal.h>
 
 #ifndef CACHESIZE
 #define CACHESIZE 1000
@@ -52,7 +53,6 @@ DHT dht;
 
 bool panic = false;
 
-uint32_t queryRecieves = 0;
 uint32_t queryProcessed = 0;
 uint64_t hitCount = 0;
 uint64_t missCount = 0;
@@ -150,44 +150,47 @@ void * thread_func_scheduler (void * argv) {
 
    query.setScheduledDate ();
 
-   int bytes_sent = recv (sock_scheduler, &query, sizeof(Packet), 0);
-   if (bytes_sent != sizeof (Packet)) {
-    log (M_WARN, local_ip, "I Received a strange length data");
-    continue;
+   struct timeval timeout = {1, 0};
+
+   fd_set readSet;
+   FD_ZERO (&readSet);
+   FD_SET (sock_scheduler, &readSet);
+
+   if ((select(sock_scheduler+1, &readSet, NULL, NULL, &timeout) >= 0) && 
+       FD_ISSET(sock_scheduler, &readSet)) 
+   {
+
+    int bytes_recv = recv (sock_scheduler, &query, sizeof(Packet), MSG_WAITALL);
+    if (bytes_recv != sizeof (Packet)) {
+     log (M_WARN, local_ip, "UNKNOWN data [LENGTH: %i]", bytes_recv);
+     continue;
+    }
+
+    if (query.trace) log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
+
+    query.setStartDate ();                                           
+    bool found = cache.match (query); //! change it
+    query.setFinishedDate ();                                        
+
+    if (query.trace) {
+     if (found) log (M_DEBUG, local_ip, "[QUERY: %i] found in the cache",query.get_point());
+     else       log (M_DEBUG, local_ip, "[QUERY: %i] not found in the cache",query.get_point());
+    }
+
+    //! if its not found & is not in the inner layer section
+    if (!found && !dht.check (query) && dht.request (query)) RequestedData++;
+
+    if (found) hitCount++; else missCount++;
+
+    queryProcessed++;                                                
+
+    TotalExecTime += query.getExecTime ();                            
+    TotalWaitTime += query.getWaitTime ();                           
    }
-
-   if (query.trace) log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
-
-   query.setStartDate ();                                           
-   bool found = cache.match (query); //! change it
-   query.setFinishedDate ();                                        
-
-   if (query.trace) {
-    if (found) log (M_DEBUG, local_ip, "[QUERY: %i] found in the cache",query.get_point());
-    else       log (M_DEBUG, local_ip, "[QUERY: %i] not found in the cache",query.get_point());
-   }
-
-   if (!found && !dht.check (query)) 
-     if (dht.request (query)) RequestedData++;
-
-   if (found) hitCount++; else missCount++;
-
-   queryProcessed++;                                                
-   queryRecieves++;
-
-   TotalExecTime += query.getExecTime ();                            
-   TotalWaitTime += query.getWaitTime ();                           
 
    //! When it ask for information
   } else if (strcmp (recv_data, "INFO") == OK) {
    char send_data [LOT] = "", tmp [256];
-   //struct timeval timeout = {1, 0};
-
-   //fd_set readSet;
-   //	FD_ZERO(&readSet);
-   //	FD_SET(sock_server, &readSet);
-
-   //while ((select(sock_server+1, &readSet, NULL, NULL, &timeout) >= 0) && FD_ISSET(sock_server, &readSet));
 
    sprintf (tmp, "CacheHit=%"         PRIu64 "\n", hitCount);
    strncat (send_data, tmp, 256);
@@ -368,7 +371,8 @@ void parse_args (int argc, const char** argv, Arguments* args) {
 
 void catch_signal (int arg) {
  close_all ();
- log (M_ERR, local_ip, "KILL Signal received, sockets closed");
+ if (arg != SIGTERM) dump_trace ();
+ log (M_ERR, local_ip, "[Signal: %s] received, sockets closed", strsignal (arg));
 }
 
 void close_all () {

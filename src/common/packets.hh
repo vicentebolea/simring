@@ -40,7 +40,7 @@ class Header {
   bool operator== (const Header& that) {
    return point == that.point ? true: false;
   }
-};
+}__attribute__((aligned));
 
 
 class diskPage : public Header {
@@ -70,7 +70,7 @@ class diskPage : public Header {
   static bool less_than_lru (const diskPage& a, const diskPage& b) {
    return (a.time < b.time);
   }
-};
+}__attribute__((aligned));
 
 
 /** @brief Class which represent an abstract Packet which
@@ -92,7 +92,7 @@ class Packet: public Header {
   }
 
   Packet& set_time (uint64_t t) { time = t; return *this; }
-};
+} __attribute__((aligned));
 
 class Query: public Packet {
  protected:
@@ -114,6 +114,6 @@ class Query: public Packet {
   //getter
   uint64_t getWaitTime ();
   uint64_t getExecTime ();
-};
+}__attribute__((aligned));
 
 #endif

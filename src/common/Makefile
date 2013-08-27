@@ -1,5 +1,4 @@
 CXXFLAGS += -I.
-OPTIONS = -lstdc++
 sources := $(wildcard *.cc) 
 objects := $(patsubst %.cc, %.o, $(sources))
 .SUFFIXES: .o .cc
@@ -8,9 +7,11 @@ objects := $(patsubst %.cc, %.o, $(sources))
 	$(CXX) $(CXXFLAGS) -c $< -o $@ $(OPTIONS)
 
 all: $(objects) 
-	-rm libsimring.a
-	$(AR) -rv libsimring.a $(objects)
-	-rm $(objects)
+	@echo -ne "\e[33mCreating simring library...\e[0m"
+	@-rm libsimring.a
+	@$(AR) -cr libsimring.a $(objects)
+	@echo -ne "\e[33mDONE\e[0m\n"
+	@-rm $(objects)
 
 $(objects) : $(sources)
 

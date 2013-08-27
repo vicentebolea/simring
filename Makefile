@@ -9,11 +9,11 @@
 #                      #
 ########################
 
-CXX = colorgcc
+CXX = gcc
 MAKE = make
 AR = ar
 
-CXXFLAGS = -Wall -g -std=gnu++98
+CXXFLAGS = -Wall -g -std=gnu++98 -rdynamic
 INCLUDE = -I./lib/ -I./src/common/ -L./lib/ 
 BINLIB  = -lstdc++ -lsimring
 

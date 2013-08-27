@@ -73,7 +73,7 @@ ostream& operator<< (ostream& out, SETcache& in) {
  *
  */
 bool SETcache::match (Query& q) {
- if (policy & UPDATE) update (q.low_b, q.upp_b);
+// if (policy & UPDATE) update (q.low_b, q.upp_b);
 
  this->boundary_low = q.low_b;
  this->boundary_upp = q.upp_b;
@@ -151,12 +151,13 @@ bool SETcache::is_valid (diskPage& dp) {
   max_dist = labs (((uint64_t)ema) - lowest);
 
  else 
-  max_dist = labs (((uint64_t)highest) - ema);
+  max_dist = labs ((uint64_t)(((uint64_t)highest) - ema));
 
 
 
  //! If the new DP was more recently used than the oldest :LRU:
- if (dp.time < oldest || max_dist > (labs((uint64_t)dp.point - ((uint64_t)ema)))) {
+ if (dp.time < oldest || 
+     max_dist > (uint64_t)(labs ( (uint64_t) ((uint64_t)dp.point - ((uint64_t)ema)) ))) {
   diskPage in = dp;
 
   pthread_mutex_lock (&mutex_match);
@@ -193,7 +194,7 @@ void SETcache::pop_farthest () {
     pthread_mutex_unlock (&mutex_queue_low);
 
     pthread_mutex_lock (&mutex_match);
-    cache->erase (lowest);
+    cache->erase (*first);
     cache_time->erase (*first);
     pthread_mutex_unlock (&mutex_match);
 
@@ -205,35 +206,36 @@ void SETcache::pop_farthest () {
     pthread_mutex_unlock (&mutex_queue_upp);
 
     pthread_mutex_lock (&mutex_match);
-    cache->erase (highest);
+    cache->erase (*last);
     cache_time->erase (*last);
     pthread_mutex_unlock (&mutex_match);
    }
 
    //! Otherwise pop the oldest element :LRU:
-  } else {
-   set<diskPage>::iterator oldest = cache->begin();
-   uint64_t oldest_time = (*oldest).time;
-   uint64_t oldest_item = (*oldest).point;
+ // } else {
+ //  set<diskPage>::iterator oldest = cache_time->begin();
+ //  uint64_t oldest_time = (*oldest).time;
+ //  uint64_t oldest_item = (*oldest).point;
 
-   //! Depends of the position
-   if (oldest_item < ema) {
-    pthread_mutex_lock (&mutex_queue_low);
-    queue_lower.push (*oldest);
-    pthread_mutex_unlock (&mutex_queue_low);
+ //  //! Depends of the position
+ //  if (oldest_item < ema) {
+ //   pthread_mutex_lock (&mutex_queue_low);
+ //   queue_lower.push (*oldest);
+ //   pthread_mutex_unlock (&mutex_queue_low);
 
-   } else {
-    pthread_mutex_lock (&mutex_queue_upp);
-    queue_upper.push (*oldest);
-    pthread_mutex_unlock (&mutex_queue_upp);
+ //  } else {
+ //   pthread_mutex_lock (&mutex_queue_upp);
+ //   queue_upper.push (*oldest);
+ //   pthread_mutex_unlock (&mutex_queue_upp);
 
-   }
-   pthread_mutex_lock (&mutex_match);
+ //  }
+ //  pthread_mutex_lock (&mutex_match);
 
-   cache_time->erase (oldest_time);
-   cache->erase (oldest_item);
+ //  cache_time->erase (oldest_time);
+ //  cache->erase (oldest_item);
 
-   pthread_mutex_unlock (&mutex_match);
+ //  pthread_mutex_unlock (&mutex_match);
+ // }
   }
  }
 }
