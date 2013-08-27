@@ -31,6 +31,8 @@ void
 log (int type, const char* _ip, const char* in, ...) 
 {
  va_list args;
+ char output [256];
+ fprintf (output, "%s\e[33m::\e[0m[\e[36m%s\e[0m]\e[1m \e[33m", error_str [type],  _ip);
 
  if (isatty (fileno (stdout)) || true)
    fprintf (stderr, "%s\e[33m::\e[0m[\e[36m%s\e[0m]\e[1m \e[33m", error_str [type],  _ip);

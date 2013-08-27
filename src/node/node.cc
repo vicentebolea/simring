@@ -140,76 +140,77 @@ void * Node::func_scheduler (void) {
   //! When a new query arrive
   if (strcmp (recv_data, "QUERY") == OK) {
    Query query;
-
    query.setScheduledDate ();
 
-   int bytes_sent = recv (sock_scheduler, &query, sizeof(Packet), 0);
-   if (bytes_sent != sizeof (Packet)) {
-    log (M_WARN, local_ip, "I Received a strange length data");
-    continue;
-   }
+	 if (fd_is_ready (sock_scheduler)) {
+		 int bytes_sent = recv (sock_scheduler, &query, sizeof(Packet), 0);
+		 if (bytes_sent != sizeof (Packet)) {
+			 log (M_WARN, local_ip, "I Received a strange length data");
+			 continue;
+		 }
 
-   if (query.trace) 
-    log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
+		 if (query.trace) 
+			 log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
 
-   query.setStartDate ();                                           
-   bool found = cache.match (query); //! change it
-   query.setFinishedDate ();                                        
+		 query.setStartDate ();                                           
+		 bool found = cache.match (query); //! change it
+		 query.setFinishedDate ();                                        
 
-   if (query.trace) {
-    if (found) 
-     log (M_DEBUG, local_ip, "[QUERY: %i] found in the cache",query.get_point());
-    else 
-     log (M_DEBUG, local_ip, "[QUERY: %i] not found in the cache",query.get_point());
-   }
+		 if (query.trace) {
+			 if (found) 
+				 log (M_DEBUG, local_ip, "[QUERY: %i] found in the cache",query.get_point());
+			 else 
+				 log (M_DEBUG, local_ip, "[QUERY: %i] not found in the cache",query.get_point());
+		 }
 
-   if (!found && !dht.check (query)) 
-     if (dht.request (query)) RequestedData++;
+		 if (!found && !dht.check (query)) 
+			 if (dht.request (query)) RequestedData++;
 
-   if (found) hitCount++; else missCount++;
+		 if (found) hitCount++; else missCount++;
 
-   queryProcessed++;                                                
-   queryRecieves++;
+		 queryProcessed++;                                                
+		 queryRecieves++;
 
-   TotalExecTime += query.getExecTime ();                            
-   TotalWaitTime += query.getWaitTime ();                           
+		 TotalExecTime += query.getExecTime ();                            
+		 TotalWaitTime += query.getWaitTime ();                           
+	 }
 
-   //! When it ask for information
-  } else if (strcmp (recv_data, "INFO") == OK) {
-   char send_data [LOT] = "", tmp [256];
+	 //! When it ask for information
+	} else if (strcmp (recv_data, "INFO") == OK) {
+		char send_data [LOT] = "", tmp [256];
 
-   sprintf (tmp, "CacheHit=%"         PRIu64 "\n", hitCount);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "CacheMiss=%"        PRIu64 "\n", missCount);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "QueryCount=%"       PRIu32 "\n", queryProcessed);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "TotalExecTime=%"    PRIu64 "\n", TotalExecTime);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "TotalWaitTime=%"    PRIu64 "\n", TotalWaitTime);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "TotalWaitTime=%"    PRIu64 "\n", TotalWaitTime);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "shiftedQuery=%"     PRIu64 "\n", shiftedQuery);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "SentShiftedQuery=%" PRIu64 "\n", SentShiftedQuery);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "RequestedData=%"    PRIu64 "\n", RequestedData);
-   strncat (send_data, tmp, 256);
-   sprintf (tmp, "ReceivedData=%"     PRIu64 "\n", ReceivedData);
-   strncat (send_data, tmp, 256);
+		sprintf (tmp, "CacheHit=%"         PRIu64 "\n", hitCount);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "CacheMiss=%"        PRIu64 "\n", missCount);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "QueryCount=%"       PRIu32 "\n", queryProcessed);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "TotalExecTime=%"    PRIu64 "\n", TotalExecTime);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "TotalWaitTime=%"    PRIu64 "\n", TotalWaitTime);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "TotalWaitTime=%"    PRIu64 "\n", TotalWaitTime);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "shiftedQuery=%"     PRIu64 "\n", shiftedQuery);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "SentShiftedQuery=%" PRIu64 "\n", SentShiftedQuery);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "RequestedData=%"    PRIu64 "\n", RequestedData);
+		strncat (send_data, tmp, 256);
+		sprintf (tmp, "ReceivedData=%"     PRIu64 "\n", ReceivedData);
+		strncat (send_data, tmp, 256);
 
-   _send (sock_scheduler, send_data, LOT, 0);
+		_send (sock_scheduler, send_data, LOT, 0);
 
-   //! In case that we need to finish the execution 
-  } else if (strcmp (recv_data, "QUIT") == OK) {
-   panic = true;
-   sleep (1);
+		//! In case that we need to finish the execution 
+	} else if (strcmp (recv_data, "QUIT") == OK) {
+		panic = true;
+		sleep (1);
 
-  } else {
-   log (M_WARN, local_ip, "Unknown message received [MSG: %s]", recv_data);
-   panic = true;
-  }
+	} else {
+		log (M_WARN, local_ip, "Unknown message received [MSG: %s]", recv_data);
+		panic = true;
+	}
  }
  pthread_exit (EXIT_SUCCESS);
 }
@@ -222,24 +223,24 @@ void * Node::func_scheduler (void) {
  *
  */
 void * Node::func_neighbor (void) {
- socklen_t s = sizeof (sockaddr);
- assert (addr->sin_family == AF_INET);
+	socklen_t s = sizeof (sockaddr);
+	assert (addr->sin_family == AF_INET);
 
- while (!panic) {
-  diskPage dp;
-  
-  if (fd_is_ready (sock_server)) {
+	while (!panic) {
+		diskPage dp;
 
-   int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr_server, &s);
-   if (ret != sizeof (diskPage) && ret != -1) 
-     log (M_WARN, local_ip, "[THREAD_FUNC_NEIGHBOR] Strange diskpage received");
+		if (fd_is_ready (sock_server)) {
 
-   if (ret == -1) { continue; }
+			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr_server, &s);
+			if (ret != sizeof (diskPage) && ret != -1) 
+				log (M_WARN, local_ip, "[THREAD_FUNC_NEIGHBOR] Strange diskpage received");
 
-   if (cache.is_valid (dp)) shiftedQuery++;
-  }
- }
- pthread_exit (EXIT_SUCCESS);
+			if (ret == -1) { continue; }
+
+			if (cache.is_valid (dp)) shiftedQuery++;
+		}
+	}
+	pthread_exit (EXIT_SUCCESS);
 }
 
 /*
@@ -248,24 +249,24 @@ void * Node::func_neighbor (void) {
  * @param 
  */
 void * Node::func_forward (void) {
- socklen_t s = sizeof (struct sockaddr);	
+	socklen_t s = sizeof (struct sockaddr);	
 
- while (!panic) {
-  if (!cache.queue_lower.empty ()) {
+	while (!panic) {
+		if (!cache.queue_lower.empty ()) {
 
-   diskPage DP = cache.get_low ();
-   sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)addr_left, s);
-   SentShiftedQuery++;
-  }
+			diskPage DP = cache.get_low ();
+			sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)addr_left, s);
+			SentShiftedQuery++;
+		}
 
-  if (!cache.queue_upper.empty ()) {
+		if (!cache.queue_upper.empty ()) {
 
-   diskPage DP = cache.get_upp ();
-   sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)addr_right, s); 
-   SentShiftedQuery++;
-  }
- }
- pthread_exit (EXIT_SUCCESS);
+			diskPage DP = cache.get_upp ();
+			sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)addr_right, s); 
+			SentShiftedQuery++;
+		}
+	}
+	pthread_exit (EXIT_SUCCESS);
 }
 
 //---------------------------------------------------------------------//
@@ -278,15 +279,15 @@ void * Node::func_forward (void) {
  * @param 
  */
 void Node::setup_server_peer (int port, int* sock, sockaddr_in* addr) {
- socklen_t s = sizeof (sockaddr);
- EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+	socklen_t s = sizeof (sockaddr);
+	EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
- addr->sin_family      = AF_INET;
- addr->sin_port        = htons (PEER_PORT);
- addr->sin_addr.s_addr = htonl (INADDR_ANY);
- bzero (&(addr->sin_zero), 8);
+	addr->sin_family      = AF_INET;
+	addr->sin_port        = htons (PEER_PORT);
+	addr->sin_addr.s_addr = htonl (INADDR_ANY);
+	bzero (&(addr->sin_zero), 8);
 
- EXIT_IF (bind (*sock, (sockaddr*)addr, s), "BIND PEER");
+	EXIT_IF (bind (*sock, (sockaddr*)addr, s), "BIND PEER");
 }
 
 /*
@@ -294,15 +295,15 @@ void Node::setup_server_peer (int port, int* sock, sockaddr_in* addr) {
  * @param 
  * @param 
  */
-void 
+	void 
 Node::setup_client_peer (const int port, const char* host, int* sock, sockaddr_in* addr)
 {
- EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
+	EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
- addr->sin_family      = AF_INET;
- addr->sin_port        = htons (PEER_PORT);
- addr->sin_addr.s_addr = inet_addr (host);
- bzero (&(addr->sin_zero), 8);
+	addr->sin_family      = AF_INET;
+	addr->sin_port        = htons (PEER_PORT);
+	addr->sin_addr.s_addr = inet_addr (host);
+	bzero (&(addr->sin_zero), 8);
 }
 
 /*
@@ -311,17 +312,17 @@ Node::setup_client_peer (const int port, const char* host, int* sock, sockaddr_i
  * @param 
  */
 void Node::setup_client_scheduler (int port, const char* host, int* sock) {
- struct sockaddr_in server_addr;  
- socklen_t s = sizeof (sockaddr);
+	struct sockaddr_in server_addr;  
+	socklen_t s = sizeof (sockaddr);
 
- EXIT_IF (*sock = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP), "SOCKET SCHEDULER");
+	EXIT_IF (*sock = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP), "SOCKET SCHEDULER");
 
- server_addr.sin_family      = AF_INET;
- server_addr.sin_port        = htons (port);
- server_addr.sin_addr.s_addr = inet_addr (host);
- bzero (&(server_addr.sin_zero), 8);
+	server_addr.sin_family      = AF_INET;
+	server_addr.sin_port        = htons (port);
+	server_addr.sin_addr.s_addr = inet_addr (host);
+	bzero (&(server_addr.sin_zero), 8);
 
- EXIT_IF (connect (*sock, (sockaddr*)&server_addr, s), "CONNECT SCHEDULER");
+	EXIT_IF (connect (*sock, (sockaddr*)&server_addr, s), "CONNECT SCHEDULER");
 }
 
 /*
@@ -330,29 +331,29 @@ void Node::setup_client_scheduler (int port, const char* host, int* sock) {
  * @param array of args 
  */
 void Node::parse_args (int argc, const char** argv) {
- int c = 0;  
- do {
-  switch (c) {
-   case 'h': strncpy (host_str, optarg, 32);   break;
-   case 'd': strncpy (data_file, optarg, 256); break;
-   case 'p': port = atoi (optarg);             break;
-  }
-  c = getopt (argc, const_cast<char**> (argv), "h:d:p:r:l:");
- } while (c != -1);
+	int c = 0;  
+	do {
+		switch (c) {
+			case 'h': strncpy (host_str, optarg, 32);   break;
+			case 'd': strncpy (data_file, optarg, 256); break;
+			case 'p': port = atoi (optarg);             break;
+		}
+		c = getopt (argc, const_cast<char**> (argv), "h:d:p:r:l:");
+	} while (c != -1);
 
- // Check if everything was set
- if (!host_str || !data_file || !port)
-  log (M_ERR, local_ip, "PARSER: Arguments needs to be setted");
+	// Check if everything was set
+	if (!host_str || !data_file || !port)
+		log (M_ERR, local_ip, "PARSER: Arguments needs to be setted");
 }
 
 void Node::catch_signal (int arg) {
- close_all ();
- log (M_ERR, local_ip, "KILL Signal received, sockets closed");
+	close_all ();
+	log (M_ERR, local_ip, "KILL Signal received, sockets closed");
 }
 
 void Node::close_all () {
- close (sock_scheduler);
- close (sock_left);
- close (sock_right);
- close (sock_server);
+	close (sock_scheduler);
+	close (sock_left);
+	close (sock_right);
+	close (sock_server);
 }
