@@ -3,6 +3,7 @@
 
 #include <dht.hh>
 #include <simring.hh>
+#include <SETcache.hh>
 
 #include <iostream>
 #include <inttypes.h>
@@ -25,26 +26,12 @@
 
 using namespace std;
 
-const char * network_ip [10] = 
-{
-   "192.168.1.1",
-   "192.168.1.2",
-   "192.168.1.3",
-   "192.168.1.4",
-   "192.168.1.5",
-   "192.168.1.6",
-   "192.168.1.7",
-   "192.168.1.8",
-   "192.168.1.9",
-   "192.168.1.10"
-};
-
 class Node {
  protected:
   SETcache* cache;
   DHT dht;
   int sock_scheduler, sock_left, sock_right, sock_server;  
-  int sch_port, peer_port, dht_port, local_no;
+  int sch_port, peer_port, dht_port, local_no, nservers;
   char *local_ip, peer_left [32], peer_right[32], host_str [128], data_file [128];
   bool panic, color;
 
@@ -54,6 +41,10 @@ class Node {
   uint64_t missCount;
   uint64_t TotalExecTime;
   uint64_t TotalWaitTime;
+  uint64_t ReceivedData;
+  uint64_t RequestedData;
+  uint64_t shiftedQuery;
+  uint64_t SentShiftedQuery;
 
   pthread_t thread_neighbor;
   pthread_t thread_scheduler;
@@ -72,23 +63,37 @@ class Node {
   void setup_client_scheduler (int, const char*, int*) WEAK;
   void parse_args             (int, const char**) WEAK;
   void close_all              (void) WEAK;
-  void catch_signal           (int);
+  Node() {}                                      //! For singleton
 
  public:
-  Node (int, const char**, const char*);
+  void setup (int, const char**, const char*);
   ~Node ();
 
   bool run ();
   bool join ();
 
   /*******************LOW LEVEL FUNCTIONS FOR MULTITHREADING************************************/
-  static Node& instance;
+	static Node* instance;
+	static Node& get_instance (int argc, const char ** argv, const char * ifa) {
+    if (Node::instance == NULL) 
+     Node::instance = new Node ();
 
-  static void  signal_handler        (int arg)       { Node::instance.catch_signal (arg); }
-  static void* thread_func_dht       (void* context) { ((Node*)context)->func_dht(); return NULL;}
-  static void* thread_func_scheduler (void* context) { ((Node*)context)->func_scheduler(); return NULL;}
-  static void* thread_func_neighbor  (void* context) { ((Node*)context)->func_neighbor(); return NULL;}
-  static void* thread_func_forward   (void* context) { ((Node*)context)->func_forward(); return NULL;}
+		Node& node = *Node::instance;
+		node.setup (argc, argv, ifa);
+		return node;
+	}
+
+	static Node& get_instance () {
+    if (Node::instance == NULL) Node::instance = new Node ();
+		return *Node::instance;
+	}
+
+	void         catch_signal          (int);
+	static void  signal_handler        (int arg)       { (*Node::instance).catch_signal (arg); }
+	static void* thread_func_dht       (void* context) { ((Node*)context)->func_dht(); return NULL;}
+	static void* thread_func_scheduler (void* context) { ((Node*)context)->func_scheduler(); return NULL;}
+	static void* thread_func_neighbor  (void* context) { ((Node*)context)->func_neighbor(); return NULL;}
+	static void* thread_func_forward   (void* context) { ((Node*)context)->func_forward(); return NULL;}
 
 };
 

@@ -8,7 +8,9 @@
 
 int main (int argc, const char** argv) {
 
- Node node (argc, argv, "eth0");
+ Node& node = Node::get_instance ();
+ node.setup (argc, argv, "eth0");
+
  node.run ();
  node.join ();
 

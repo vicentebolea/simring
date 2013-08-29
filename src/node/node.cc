@@ -17,11 +17,27 @@
 #include <iostream>
 #include <queue>
 
+const char * network_ip [10] = 
+{
+   "192.168.1.1",
+   "192.168.1.2",
+   "192.168.1.3",
+   "192.168.1.4",
+   "192.168.1.5",
+   "192.168.1.6",
+   "192.168.1.7",
+   "192.168.1.8",
+   "192.168.1.9",
+   "192.168.1.10"
+};
+
+Node* Node::instance = NULL;
 //---------------------------------------------------------------------//
 //-----------END OF VARIABLES, FUNTIONS DEFINITIONS--------------------//
 //---------------------------------------------------------------------//
 
-Node::Node (int argc, const char ** argv, const char * ifa): cache (new SETcache (CACHESIZE)) {
+void Node::setup (int argc, const char ** argv, const char * ifa) {
+ cache = new SETcache (CACHESIZE);
  queryRecieves = 0;
  queryProcessed = 0;
  hitCount = 0;
@@ -50,8 +66,6 @@ Node::Node (int argc, const char ** argv, const char * ifa): cache (new SETcache
  if (local_no < nservers) strcpy (peer_right, network_ip [local_no + 1]);
  if (peer_left)  setup_client_peer (peer_port, peer_left, &sock_left, &addr_left);
  if (peer_right) setup_client_peer (peer_port, peer_right, &sock_right, &addr_right);
-
- instance = *this;
 }
 
 Node::~Node () { close_all (); }
@@ -63,7 +77,9 @@ bool Node::run () {
  pthread_create (&thread_neighbor,  NULL, thread_func_neighbor,  this);
  pthread_create (&thread_forward,   NULL, thread_func_forward,   this);
  pthread_create (&thread_dht,       NULL, thread_func_dht,       this);
-//#endif
+ //#endif
+
+ return true;
 }
 
 bool Node::join () {
@@ -73,7 +89,9 @@ bool Node::join () {
  pthread_join (thread_forward,   NULL);
  pthread_join (thread_neighbor,  NULL);
  pthread_join (thread_dht,       NULL);
-//#endif
+ //#endif
+ 
+ return true;
 }
 
 /*
@@ -106,10 +124,10 @@ void* Node::func_dht (void) {
 
     ReceivedData++;
     //! load the data first from memory after from HD
-    diskPage DPrequested = cache.get_diskPage (Hrequested.get_point ());
+    diskPage DPrequested = cache->get_diskPage (Hrequested.get_point ());
 
     //! Send to the ip which is asking for it
-    client_addr.sin_port = htons (PEER_PORT);
+    client_addr.sin_port = htons (peer_port);
 
     char address [INET_ADDRSTRLEN];
     inet_ntop (AF_INET, &client_addr.sin_addr, address, INET_ADDRSTRLEN);
@@ -153,7 +171,7 @@ void * Node::func_scheduler (void) {
 			 log (M_DEBUG, local_ip, "[QUERY: %i] arrived from scheduler",query.get_point());
 
 		 query.setStartDate ();                                           
-		 bool found = cache.match (query); //! change it
+		 bool found = cache->match (query); //! change it
 		 query.setFinishedDate ();                                        
 
 		 if (query.trace) {
@@ -200,7 +218,7 @@ void * Node::func_scheduler (void) {
 		sprintf (tmp, "ReceivedData=%"     PRIu64 "\n", ReceivedData);
 		strncat (send_data, tmp, 256);
 
-		_send (sock_scheduler, send_data, LOT, 0);
+		send (sock_scheduler, send_data, LOT, 0);
 
 		//! In case that we need to finish the execution 
 	} else if (strcmp (recv_data, "QUIT") == OK) {
@@ -224,20 +242,19 @@ void * Node::func_scheduler (void) {
  */
 void * Node::func_neighbor (void) {
 	socklen_t s = sizeof (sockaddr);
-	assert (addr->sin_family == AF_INET);
 
 	while (!panic) {
 		diskPage dp;
 
 		if (fd_is_ready (sock_server)) {
 
-			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)addr_server, &s);
+			int ret = recvfrom (sock_server, &dp, sizeof (diskPage), 0, (sockaddr*)&addr_server, &s);
 			if (ret != sizeof (diskPage) && ret != -1) 
 				log (M_WARN, local_ip, "[THREAD_FUNC_NEIGHBOR] Strange diskpage received");
 
 			if (ret == -1) { continue; }
 
-			if (cache.is_valid (dp)) shiftedQuery++;
+			if (cache->is_valid (dp)) shiftedQuery++;
 		}
 	}
 	pthread_exit (EXIT_SUCCESS);
@@ -252,17 +269,17 @@ void * Node::func_forward (void) {
 	socklen_t s = sizeof (struct sockaddr);	
 
 	while (!panic) {
-		if (!cache.queue_lower.empty ()) {
+		if (!cache->queue_lower.empty ()) {
 
-			diskPage DP = cache.get_low ();
-			sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)addr_left, s);
+			diskPage DP = cache->get_low ();
+			sendto (sock_left, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_left, s);
 			SentShiftedQuery++;
 		}
 
-		if (!cache.queue_upper.empty ()) {
+		if (!cache->queue_upper.empty ()) {
 
-			diskPage DP = cache.get_upp ();
-			sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)addr_right, s); 
+			diskPage DP = cache->get_upp ();
+			sendto (sock_right, &DP, sizeof (diskPage), 0, (sockaddr*)&addr_right, s); 
 			SentShiftedQuery++;
 		}
 	}
@@ -283,7 +300,7 @@ void Node::setup_server_peer (int port, int* sock, sockaddr_in* addr) {
 	EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
 	addr->sin_family      = AF_INET;
-	addr->sin_port        = htons (PEER_PORT);
+	addr->sin_port        = htons (peer_port);
 	addr->sin_addr.s_addr = htonl (INADDR_ANY);
 	bzero (&(addr->sin_zero), 8);
 
@@ -301,7 +318,7 @@ Node::setup_client_peer (const int port, const char* host, int* sock, sockaddr_i
 	EXIT_IF (*sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP), "SOCKET");
 
 	addr->sin_family      = AF_INET;
-	addr->sin_port        = htons (PEER_PORT);
+	addr->sin_port        = htons (peer_port);
 	addr->sin_addr.s_addr = inet_addr (host);
 	bzero (&(addr->sin_zero), 8);
 }
@@ -336,13 +353,13 @@ void Node::parse_args (int argc, const char** argv) {
 		switch (c) {
 			case 'h': strncpy (host_str, optarg, 32);   break;
 			case 'd': strncpy (data_file, optarg, 256); break;
-			case 'p': port = atoi (optarg);             break;
+			case 'p': sch_port = atoi (optarg);             break;
 		}
 		c = getopt (argc, const_cast<char**> (argv), "h:d:p:r:l:");
 	} while (c != -1);
 
 	// Check if everything was set
-	if (!host_str || !data_file || !port)
+	if (!host_str || !data_file || !sch_port)
 		log (M_ERR, local_ip, "PARSER: Arguments needs to be setted");
 }
 

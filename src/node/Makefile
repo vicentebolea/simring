@@ -15,4 +15,4 @@ compile:
 	$(OPTIONS)
 
 clean:
-	-rm *.o node
+	-@rm *.o node

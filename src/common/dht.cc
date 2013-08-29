@@ -50,7 +50,7 @@ void DHT::set_network (int port, int n, const char* ifa, const char ** in) {
 
 bool DHT::check (Header& h) {
  assert (&h != NULL);
- return (local_no == (h.get_point () / 100000)) ? true : false;
+ return (local_no == (int)(h.get_point () / 100000)) ? true : false;
 }
 
 bool DHT::request (Header& h) {

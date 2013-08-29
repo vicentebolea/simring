@@ -9,7 +9,7 @@
 #                      #
 ########################
 
-CXX = colorgcc
+CXX = gcc
 MAKE = make
 AR = ar
 
