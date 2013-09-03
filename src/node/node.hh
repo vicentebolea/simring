@@ -63,7 +63,7 @@ class Node {
   void setup_client_scheduler (int, const char*, int*) WEAK;
   void parse_args             (int, const char**) WEAK;
   void close_all              (void) WEAK;
-  Node() {}                                      //! For singleton
+  Node () {}                  //! For singleton
 
  public:
   void setup (int, const char**, const char*);

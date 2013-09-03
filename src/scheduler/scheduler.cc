@@ -1,4 +1,5 @@
 #include <signal.h>
+#include <utils.hh>
 #include <node_client.hh>
 #include <simring.hh>
 #include <err.h>
@@ -178,6 +179,7 @@ int main (int argc, char** argv) {
  for (int i = 0; i < nservers; i++) (backend[i] = new Node ())->accept (sock);
 
  log (M_INFO, "SCHEDULER", "All backend servers linked");
+ log (M_INFO, "SCHEDULER", "Cache size = %s", byte_units ((double)1000*4098));
  print_header ();
 
  if (setjmp (finish)) goto end; 
