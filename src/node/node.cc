@@ -4,6 +4,8 @@
  *
  *
  */
+
+// Includes {{{
 #include <node.hh>
 
 #include <dht.hh>
@@ -32,6 +34,8 @@
 #define PEER_PORT 20001
 #define DHT_PORT  20002
 
+//}}}
+// Variables definition {{{
 const char * network_ip [10] = 
 {
  "192.168.1.1",
@@ -72,10 +76,9 @@ int (*_connect) (int, const struct sockaddr*, socklen_t) = connect;
 //-----------END OF VARIABLES, FUNTIONS DEFINITIONS--------------------//
 //---------------------------------------------------------------------//
 
-//-----------------------------------------------------------------------
-
-/*
- *
+//--------------------------------------------------------------------}}}
+/* thread_func_dht {{{
+ * 
  */
 void* thread_func_dht (void* arg) {
  int sock_server_dht;
@@ -132,9 +135,9 @@ void* thread_func_dht (void* arg) {
  pthread_exit (EXIT_SUCCESS);
 }
 
-//--------------------------------------------------------------------
+//}}} ------------------------------------------------------------------
 
-/*
+/* thread_func_scheduler {{{
  * @brief  Thread function to receive queries from the scheduler.
  *         This function can be seen as one of the producers.
  * @args   Dummy parameter
@@ -227,9 +230,9 @@ void * thread_func_scheduler (void * argv) {
  }
  pthread_exit (EXIT_SUCCESS);
 }
+// }}}
 
-
-/*
+/* thread_func_neighbor {{{
  * @brief  Thread function to receive queries from the scheduler.
  *         This function can be seen as one of the producers.
  * @args   Dummy parameter
@@ -260,10 +263,10 @@ void * thread_func_neighbor (void* argv) {
  }
  pthread_exit (EXIT_SUCCESS);
 }
+// }}}
 
-/*
+/* thread_func_forward {{{
  * @brief
- * @param 
  * @param 
  */
 void * thread_func_forward (void * argv) {
@@ -288,12 +291,13 @@ void * thread_func_forward (void * argv) {
  }
  pthread_exit (EXIT_SUCCESS);
 }
+//}}}-------------------------------------------------------------------
 
 //---------------------------------------------------------------------//
 //-----------SETTING UP FUNCTIONS--------------------------------------//
 //---------------------------------------------------------------------//
 
-/*
+/* setup_server_peer {{{
  * @brief
  * @param 
  * @param 
@@ -310,7 +314,9 @@ void setup_server_peer (int port, int* sock, sockaddr_in* addr) {
  EXIT_IF (bind (*sock, (sockaddr*)addr, s), "BIND PEER");
 }
 
-/*
+// }}}-------------------------------------------------------------------
+
+/* setup_client_peer {{{
  * @brief
  * @param 
  * @param 
@@ -325,8 +331,9 @@ void setup_client_peer (const int port, const char* host, int* sock, sockaddr_in
  bzero (&(addr->sin_zero), 8);
 }
 
+//}}}-------------------------------------------------------------------
 
-/*
+/* setup_client_scheduler {{{
  * @brief
  * @param 
  * @param 
@@ -346,7 +353,9 @@ void setup_client_scheduler (int port, const char* host, int* sock) {
  EXIT_IF (connect (*sock, (sockaddr*)&server_addr, s), "CONNECT SCHEDULER");
 }
 
-/*
+//}}}-------------------------------------------------------------------
+
+/* parse_args {{{
  * @brief parse the command line options
  * @param number or args
  * @param array of args 
@@ -369,12 +378,18 @@ void parse_args (int argc, const char** argv, Arguments* args) {
   log (M_ERR, local_ip, "PARSER: Arguments needs to be setted");
 }
 
+//}}}-------------------------------------------------------------------
+
+// catch_signal {{{
 void catch_signal (int arg) {
  close_all ();
  if (arg != SIGTERM) dump_trace ();
  log (M_ERR, local_ip, "[Signal: %s] received, sockets closed", strsignal (arg));
 }
 
+//}}}-------------------------------------------------------------------
+
+// close_all {{{
 void close_all () {
  close (sock_scheduler);
  close (sock_left);
